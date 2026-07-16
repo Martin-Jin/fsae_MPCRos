@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<!--
+  Trolley test-rig description. This is the platform autonomy is currently
+  developed/tested on (the go-kart is not yet running), so it is the DEFAULT
+  robot loaded by urdf_model.launch.py.
+
+  Ported from the old repo's trolly_description package (which was never brought
+  over in the refactor). Mesh paths re-pointed from package://trolly_description
+  to package://fsae_description.
+
+  Frames: base_link is at the FLOOR, directly under the sensor column, so z=0 is
+  the ground and the RViz grid lines up with it. Sensor heights are measured from
+  the floor: camera 0.90 m (top shelf), lidar 0.55 m (second shelf, BELOW the
+  camera). x/y = 0 (both sit directly above base_link). Camera->lidar offset is
+  therefore (0,0,-0.35) — the lidar is 0.35 m below the camera.
+-->
+<robot name="trolly">
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://fsae_description/meshes/trolly_base.stl"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://fsae_description/meshes/trolly_camera.stl"/>
+      </geometry>
+      <material name="green">
+        <color rgba="0 0.8 0 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <!-- Camera on the top shelf, 0.90 m above the floor. -->
+    <origin xyz="0 0 0.90" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ZED Camera Optical Frame (sensor frame for raw image data only).
+       NOTE: cone detections are NOT in this frame. The ZED SDK is init'd with
+       COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD (X-fwd, Y-left, Z-up), so cone
+       positions are expressed in camera_link, not zed_camera_optical_frame. -->
+  <link name="zed_camera_optical_frame"/>
+
+  <joint name="zed_camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="zed_camera_optical_frame"/>
+    <!-- ZED optical convention (X-right, Y-down, Z-forward) -->
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+  <!-- Velodyne VLP-16 frame. Matches the driver's default frame_id ('velodyne')
+       and the fusion node's lidar_frame param. -->
+  <link name="velodyne"/>
+
+  <joint name="velodyne_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="velodyne"/>
+    <!-- Lidar on the second shelf, 0.55 m up — BELOW the camera (0.90 m). -->
+    <origin xyz="0 0 0.55" rpy="0 0 0"/>
+  </joint>
+
+</robot>

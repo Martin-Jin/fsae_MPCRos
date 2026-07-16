@@ -1,6 +1,0 @@
-source;share/fsae_visualization/hook/pythonpath.ps1
-source;share/fsae_visualization/hook/pythonpath.dsv
-source;share/fsae_visualization/hook/pythonpath.sh
-source;share/fsae_visualization/hook/ament_prefix_path.ps1
-source;share/fsae_visualization/hook/ament_prefix_path.dsv
-source;share/fsae_visualization/hook/ament_prefix_path.sh

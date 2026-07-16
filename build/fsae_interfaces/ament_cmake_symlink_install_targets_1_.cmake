@@ -1,1 +1,0 @@
-ament_cmake_symlink_install_targets("TARGET_FILES" "/home/martin/autonomous_new/build/fsae_interfaces/rosidl_generator_py/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_introspection_c.so" "TARGETS" "fsae_interfaces_s__rosidl_typesupport_introspection_c" "DESTINATION" "lib/python3.12/site-packages/fsae_interfaces")

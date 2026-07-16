@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: fsae-description
-Version: 0.1.0
-Summary: URDF model and meshes for the FSAE go-kart platform
-Maintainer: UoA FSAE
-Maintainer-email: fsae@auckland.ac.nz
-License: MIT

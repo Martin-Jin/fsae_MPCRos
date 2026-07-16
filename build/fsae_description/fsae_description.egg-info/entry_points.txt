@@ -1,2 +1,0 @@
-[console_scripts]
-state_publisher = fsae_description.state_publisher:main

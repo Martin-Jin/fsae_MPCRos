@@ -1,0 +1,59 @@
+#ifndef TRTX_YOLOV5_UTILS_H_
+#define TRTX_YOLOV5_UTILS_H_
+
+#include <opencv2/opencv.hpp>
+#include <math.h>
+#include <fstream>
+#include "yolo.hpp"
+
+
+static inline cv::Mat preprocess_img(cv::Mat& img, int input_w, int input_h) {
+    int w, h, x, y;
+    float r_w = input_w / (img.cols * 1.0);
+    float r_h = input_h / (img.rows * 1.0);
+    if (r_h > r_w) {
+        w = input_w;
+        h = r_w * img.rows;
+        x = 0;
+        y = (input_h - h) / 2;
+    } else {
+        w = r_h * img.cols;
+        h = input_h;
+        x = (input_w - w) / 2;
+        y = 0;
+    }
+    cv::Mat re(h, w, CV_8UC3);
+    cv::resize(img, re, re.size(), 0, 0, cv::INTER_LINEAR);
+    cv::Mat out(input_h, input_w, CV_8UC3, cv::Scalar(128, 128, 128));
+    re.copyTo(out(cv::Rect(x, y, re.cols, re.rows)));
+    return out;
+}
+
+std::vector<std::vector<int>> const CLASS_COLORS = {
+    {0, 114, 189},   {217, 83, 25},   {237, 177, 32},  {126, 47, 142},  {119, 172, 48},  {77, 190, 238},
+    {162, 20, 47},   {76, 76, 76},    {153, 153, 153}, {255, 0, 0},     {255, 128, 0},   {191, 191, 0},
+    {0, 255, 0},     {0, 0, 255},     {170, 0, 255},   {85, 85, 0},     {85, 170, 0},    {85, 255, 0},
+    {170, 85, 0},    {170, 170, 0},   {170, 255, 0},   {255, 85, 0},    {255, 170, 0},   {255, 255, 0},
+    {0, 85, 128},    {0, 170, 128},   {0, 255, 128},   {85, 0, 128},    {85, 85, 128},   {85, 170, 128},
+    {85, 255, 128},  {170, 0, 128},   {170, 85, 128},  {170, 170, 128}, {170, 255, 128}, {255, 0, 128},
+    {255, 85, 128},  {255, 170, 128}, {255, 255, 128}, {0, 85, 255},    {0, 170, 255},   {0, 255, 255},
+    {85, 0, 255},    {85, 85, 255},   {85, 170, 255},  {85, 255, 255},  {170, 0, 255},   {170, 85, 255},
+    {170, 170, 255}, {170, 255, 255}, {255, 0, 255},   {255, 85, 255},  {255, 170, 255}, {85, 0, 0},
+    {128, 0, 0},     {170, 0, 0},     {212, 0, 0},     {255, 0, 0},     {0, 43, 0},      {0, 85, 0},
+    {0, 128, 0},     {0, 170, 0},     {0, 212, 0},     {0, 255, 0},     {0, 0, 43},      {0, 0, 85},
+    {0, 0, 128},     {0, 0, 170},     {0, 0, 212},     {0, 0, 255},     {0, 0, 0},       {36, 36, 36},
+    {73, 73, 73},    {109, 109, 109}, {146, 146, 146}, {182, 182, 182}, {219, 219, 219}, {0, 114, 189},
+    {80, 183, 189},  {128, 128, 0}};
+
+
+
+inline bool readFile(std::string filename, std::vector<uint8_t> &file_content) {
+    // open the file:
+    std::ifstream instream(filename, std::ios::in | std::ios::binary);
+    if (!instream.is_open()) return true;
+    file_content = std::vector<uint8_t>((std::istreambuf_iterator<char>(instream)), std::istreambuf_iterator<char>());
+    return false;
+}
+
+#endif  // TRTX_YOLOV5_UTILS_H_
+

@@ -1,2 +1,0 @@
-[console_scripts]
-inspection_mission_node = fsae_mission_control.inspection_mission:main
