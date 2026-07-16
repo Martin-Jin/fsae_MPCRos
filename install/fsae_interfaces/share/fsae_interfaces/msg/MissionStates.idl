@@ -1,0 +1,14 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from fsae_interfaces/msg/MissionStates.msg
+// generated code does not contain a copyright notice
+
+
+module fsae_interfaces {
+  module msg {
+    struct MissionStates {
+      uint8 mission_selected;
+
+      uint8 mission_finished;
+    };
+  };
+};

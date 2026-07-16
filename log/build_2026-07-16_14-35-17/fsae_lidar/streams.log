@@ -1,0 +1,45 @@
+[3.474s] Invoking command in '/home/martin/autonomous_new/src/fsae_autonomous/perception/fsae_lidar': AMENT_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/martin/autonomous_new/install/fsae_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/martin/autonomous_new/build/fsae_lidar/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages:/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/fsae_lidar build --build-base /home/martin/autonomous_new/build/fsae_lidar/build install --record /home/martin/autonomous_new/build/fsae_lidar/install.log --single-version-externally-managed install_data
+[4.035s] running egg_info
+[4.036s] creating ../../../../build/fsae_lidar/fsae_lidar.egg-info
+[4.084s] writing ../../../../build/fsae_lidar/fsae_lidar.egg-info/PKG-INFO
+[4.084s] writing dependency_links to ../../../../build/fsae_lidar/fsae_lidar.egg-info/dependency_links.txt
+[4.085s] writing entry points to ../../../../build/fsae_lidar/fsae_lidar.egg-info/entry_points.txt
+[4.085s] writing requirements to ../../../../build/fsae_lidar/fsae_lidar.egg-info/requires.txt
+[4.085s] writing top-level names to ../../../../build/fsae_lidar/fsae_lidar.egg-info/top_level.txt
+[4.086s] writing manifest file '../../../../build/fsae_lidar/fsae_lidar.egg-info/SOURCES.txt'
+[4.208s] reading manifest file '../../../../build/fsae_lidar/fsae_lidar.egg-info/SOURCES.txt'
+[4.210s] writing manifest file '../../../../build/fsae_lidar/fsae_lidar.egg-info/SOURCES.txt'
+[4.210s] running build
+[4.210s] running build_py
+[4.211s] creating /home/martin/autonomous_new/build/fsae_lidar/build
+[4.212s] creating /home/martin/autonomous_new/build/fsae_lidar/build/lib
+[4.212s] creating /home/martin/autonomous_new/build/fsae_lidar/build/lib/fsae_lidar
+[4.214s] copying fsae_lidar/refinement.py -> /home/martin/autonomous_new/build/fsae_lidar/build/lib/fsae_lidar
+[4.215s] copying fsae_lidar/__init__.py -> /home/martin/autonomous_new/build/fsae_lidar/build/lib/fsae_lidar
+[4.215s] copying fsae_lidar/fusion_node.py -> /home/martin/autonomous_new/build/fsae_lidar/build/lib/fsae_lidar
+[4.220s] running install
+[4.234s] running install_lib
+[4.292s] creating /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar
+[4.293s] copying /home/martin/autonomous_new/build/fsae_lidar/build/lib/fsae_lidar/refinement.py -> /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar
+[4.294s] copying /home/martin/autonomous_new/build/fsae_lidar/build/lib/fsae_lidar/__init__.py -> /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar
+[4.295s] copying /home/martin/autonomous_new/build/fsae_lidar/build/lib/fsae_lidar/fusion_node.py -> /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar
+[4.296s] byte-compiling /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar/refinement.py to refinement.cpython-312.pyc
+[4.303s] byte-compiling /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar/__init__.py to __init__.cpython-312.pyc
+[4.304s] byte-compiling /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar/fusion_node.py to fusion_node.cpython-312.pyc
+[4.316s] running install_data
+[4.316s] creating /home/martin/autonomous_new/install/fsae_lidar/share/ament_index
+[4.316s] creating /home/martin/autonomous_new/install/fsae_lidar/share/ament_index/resource_index
+[4.318s] creating /home/martin/autonomous_new/install/fsae_lidar/share/ament_index/resource_index/packages
+[4.318s] copying resource/fsae_lidar -> /home/martin/autonomous_new/install/fsae_lidar/share/ament_index/resource_index/packages
+[4.320s] copying package.xml -> /home/martin/autonomous_new/install/fsae_lidar/share/fsae_lidar
+[4.320s] creating /home/martin/autonomous_new/install/fsae_lidar/share/fsae_lidar/launch
+[4.321s] copying launch/fsae_lidar_fusion.launch.py -> /home/martin/autonomous_new/install/fsae_lidar/share/fsae_lidar/launch
+[4.321s] copying launch/velodyne_vlp16.launch.py -> /home/martin/autonomous_new/install/fsae_lidar/share/fsae_lidar/launch
+[4.321s] creating /home/martin/autonomous_new/install/fsae_lidar/share/fsae_lidar/params
+[4.322s] copying params/lidar_fusion.yaml -> /home/martin/autonomous_new/install/fsae_lidar/share/fsae_lidar/params
+[4.322s] running install_egg_info
+[4.394s] Copying ../../../../build/fsae_lidar/fsae_lidar.egg-info to /home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages/fsae_lidar-0.1.0-py3.12.egg-info
+[4.397s] running install_scripts
+[4.685s] Installing fusion_node script to /home/martin/autonomous_new/install/fsae_lidar/lib/fsae_lidar
+[4.686s] writing list of installed files to '/home/martin/autonomous_new/build/fsae_lidar/install.log'
+[4.775s] Invoked command in '/home/martin/autonomous_new/src/fsae_autonomous/perception/fsae_lidar' returned '0': AMENT_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/martin/autonomous_new/install/fsae_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/martin/autonomous_new/build/fsae_lidar/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_lidar/lib/python3.12/site-packages:/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/fsae_lidar build --build-base /home/martin/autonomous_new/build/fsae_lidar/build install --record /home/martin/autonomous_new/build/fsae_lidar/install.log --single-version-externally-managed install_data

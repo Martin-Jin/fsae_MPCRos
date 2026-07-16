@@ -1,0 +1,49 @@
+[1.786s] Invoking command in '/home/martin/autonomous_new/src/fsae_autonomous/common/fsae_description': PYTHONPATH=/home/martin/autonomous_new/build/fsae_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/fsae_description build --build-base /home/martin/autonomous_new/build/fsae_description/build install --record /home/martin/autonomous_new/build/fsae_description/install.log --single-version-externally-managed install_data
+[2.227s] running egg_info
+[2.228s] creating ../../../../build/fsae_description/fsae_description.egg-info
+[2.262s] writing ../../../../build/fsae_description/fsae_description.egg-info/PKG-INFO
+[2.262s] writing dependency_links to ../../../../build/fsae_description/fsae_description.egg-info/dependency_links.txt
+[2.263s] writing entry points to ../../../../build/fsae_description/fsae_description.egg-info/entry_points.txt
+[2.263s] writing requirements to ../../../../build/fsae_description/fsae_description.egg-info/requires.txt
+[2.263s] writing top-level names to ../../../../build/fsae_description/fsae_description.egg-info/top_level.txt
+[2.263s] writing manifest file '../../../../build/fsae_description/fsae_description.egg-info/SOURCES.txt'
+[2.341s] reading manifest file '../../../../build/fsae_description/fsae_description.egg-info/SOURCES.txt'
+[2.342s] writing manifest file '../../../../build/fsae_description/fsae_description.egg-info/SOURCES.txt'
+[2.344s] running build
+[2.344s] running build_py
+[2.344s] creating /home/martin/autonomous_new/build/fsae_description/build
+[2.345s] creating /home/martin/autonomous_new/build/fsae_description/build/lib
+[2.346s] creating /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description
+[2.347s] copying fsae_description/__init__.py -> /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description
+[2.348s] copying fsae_description/state_publisher.py -> /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description
+[2.349s] running install
+[2.359s] running install_lib
+[2.393s] creating /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description
+[2.394s] copying /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description/__init__.py -> /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description
+[2.394s] copying /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description/state_publisher.py -> /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description
+[2.395s] byte-compiling /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description/__init__.py to __init__.cpython-312.pyc
+[2.396s] byte-compiling /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description/state_publisher.py to state_publisher.cpython-312.pyc
+[2.397s] running install_data
+[2.397s] creating /home/martin/autonomous_new/install/fsae_description/share/ament_index
+[2.398s] creating /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index
+[2.399s] creating /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index/packages
+[2.400s] copying resource/fsae_description -> /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index/packages
+[2.400s] copying package.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description
+[2.400s] creating /home/martin/autonomous_new/install/fsae_description/share/fsae_description/launch
+[2.401s] copying launch/urdf_model.launch.py -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/launch
+[2.402s] creating /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+[2.403s] copying urdf/urdf.rviz -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+[2.404s] copying urdf/trolly.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+[2.404s] copying urdf/gocartv1.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+[2.405s] creating /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.406s] copying meshes/go_cart_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.407s] copying meshes/go_cart_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.438s] copying meshes/trolly_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.441s] copying meshes/trolly_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.442s] copying meshes/go_cart_lidar.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.443s] running install_egg_info
+[2.483s] Copying ../../../../build/fsae_description/fsae_description.egg-info to /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description-0.1.0-py3.12.egg-info
+[2.487s] running install_scripts
+[2.687s] Installing state_publisher script to /home/martin/autonomous_new/install/fsae_description/lib/fsae_description
+[2.688s] writing list of installed files to '/home/martin/autonomous_new/build/fsae_description/install.log'
+[2.739s] Invoked command in '/home/martin/autonomous_new/src/fsae_autonomous/common/fsae_description' returned '0': PYTHONPATH=/home/martin/autonomous_new/build/fsae_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/fsae_description build --build-base /home/martin/autonomous_new/build/fsae_description/build install --record /home/martin/autonomous_new/build/fsae_description/install.log --single-version-externally-managed install_data

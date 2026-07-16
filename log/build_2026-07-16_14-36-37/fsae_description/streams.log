@@ -1,0 +1,28 @@
+[1.384s] Invoking command in '/home/martin/autonomous_new/build/fsae_description': PYTHONPATH=/home/martin/autonomous_new/build/fsae_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/martin/autonomous_new/build/fsae_description/build --no-deps symlink_data --force
+[1.805s] running develop
+[2.118s] running egg_info
+[2.145s] writing fsae_description.egg-info/PKG-INFO
+[2.146s] writing dependency_links to fsae_description.egg-info/dependency_links.txt
+[2.147s] writing entry points to fsae_description.egg-info/entry_points.txt
+[2.147s] writing requirements to fsae_description.egg-info/requires.txt
+[2.147s] writing top-level names to fsae_description.egg-info/top_level.txt
+[2.194s] reading manifest file 'fsae_description.egg-info/SOURCES.txt'
+[2.194s] writing manifest file 'fsae_description.egg-info/SOURCES.txt'
+[2.219s] running build_ext
+[2.219s] Creating /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae-description.egg-link (link to .)
+[2.220s] Installing state_publisher script to /home/martin/autonomous_new/install/fsae_description/lib/fsae_description
+[2.220s] 
+[2.221s] Installed /home/martin/autonomous_new/build/fsae_description
+[2.221s] running symlink_data
+[2.221s] symbolically linking /home/martin/autonomous_new/build/fsae_description/resource/fsae_description -> /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index/packages
+[2.221s] symbolically linking /home/martin/autonomous_new/build/fsae_description/package.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description
+[2.222s] symbolically linking /home/martin/autonomous_new/build/fsae_description/launch/urdf_model.launch.py -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/launch
+[2.222s] symbolically linking /home/martin/autonomous_new/build/fsae_description/urdf/urdf.rviz -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+[2.223s] symbolically linking /home/martin/autonomous_new/build/fsae_description/urdf/trolly.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+[2.224s] symbolically linking /home/martin/autonomous_new/build/fsae_description/urdf/gocartv1.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+[2.224s] symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/go_cart_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.226s] symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/go_cart_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.227s] symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/trolly_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.228s] symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/trolly_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.229s] symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/go_cart_lidar.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+[2.270s] Invoked command in '/home/martin/autonomous_new/build/fsae_description' returned '0': PYTHONPATH=/home/martin/autonomous_new/build/fsae_description/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/martin/autonomous_new/build/fsae_description/build --no-deps symlink_data --force

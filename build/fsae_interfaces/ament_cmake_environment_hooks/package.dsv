@@ -1,0 +1,4 @@
+source;share/fsae_interfaces/local_setup.bash
+source;share/fsae_interfaces/local_setup.dsv
+source;share/fsae_interfaces/local_setup.sh
+source;share/fsae_interfaces/local_setup.zsh

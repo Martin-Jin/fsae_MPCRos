@@ -1,0 +1,48 @@
+running egg_info
+creating ../../../../build/fsae_visualization/fsae_visualization.egg-info
+writing ../../../../build/fsae_visualization/fsae_visualization.egg-info/PKG-INFO
+writing dependency_links to ../../../../build/fsae_visualization/fsae_visualization.egg-info/dependency_links.txt
+writing entry points to ../../../../build/fsae_visualization/fsae_visualization.egg-info/entry_points.txt
+writing requirements to ../../../../build/fsae_visualization/fsae_visualization.egg-info/requires.txt
+writing top-level names to ../../../../build/fsae_visualization/fsae_visualization.egg-info/top_level.txt
+writing manifest file '../../../../build/fsae_visualization/fsae_visualization.egg-info/SOURCES.txt'
+reading manifest file '../../../../build/fsae_visualization/fsae_visualization.egg-info/SOURCES.txt'
+writing manifest file '../../../../build/fsae_visualization/fsae_visualization.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/martin/autonomous_new/build/fsae_visualization/build
+creating /home/martin/autonomous_new/build/fsae_visualization/build/lib
+creating /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization
+copying fsae_visualization/base_tf.py -> /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization
+copying fsae_visualization/visualise_cone_map.py -> /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization
+copying fsae_visualization/__init__.py -> /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization
+copying fsae_visualization/visualise_trajectories.py -> /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization
+copying fsae_visualization/visualise_pure_pursuit.py -> /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization
+running install
+running install_lib
+creating /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization
+copying /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization/base_tf.py -> /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization
+copying /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization/visualise_cone_map.py -> /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization
+copying /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization/__init__.py -> /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization
+copying /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization/visualise_trajectories.py -> /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization
+copying /home/martin/autonomous_new/build/fsae_visualization/build/lib/fsae_visualization/visualise_pure_pursuit.py -> /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization
+byte-compiling /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization/base_tf.py to base_tf.cpython-312.pyc
+byte-compiling /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization/visualise_cone_map.py to visualise_cone_map.cpython-312.pyc
+byte-compiling /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization/visualise_trajectories.py to visualise_trajectories.cpython-312.pyc
+byte-compiling /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization/visualise_pure_pursuit.py to visualise_pure_pursuit.cpython-312.pyc
+running install_data
+creating /home/martin/autonomous_new/install/fsae_visualization/share/ament_index
+creating /home/martin/autonomous_new/install/fsae_visualization/share/ament_index/resource_index
+creating /home/martin/autonomous_new/install/fsae_visualization/share/ament_index/resource_index/packages
+copying resource/fsae_visualization -> /home/martin/autonomous_new/install/fsae_visualization/share/ament_index/resource_index/packages
+copying package.xml -> /home/martin/autonomous_new/install/fsae_visualization/share/fsae_visualization
+creating /home/martin/autonomous_new/install/fsae_visualization/share/fsae_visualization/launch
+running install_egg_info
+Copying ../../../../build/fsae_visualization/fsae_visualization.egg-info to /home/martin/autonomous_new/install/fsae_visualization/lib/python3.12/site-packages/fsae_visualization-0.1.0-py3.12.egg-info
+running install_scripts
+Installing base_tf script to /home/martin/autonomous_new/install/fsae_visualization/lib/fsae_visualization
+Installing cone_map_viz script to /home/martin/autonomous_new/install/fsae_visualization/lib/fsae_visualization
+Installing path_viz script to /home/martin/autonomous_new/install/fsae_visualization/lib/fsae_visualization
+Installing pursuit_viz script to /home/martin/autonomous_new/install/fsae_visualization/lib/fsae_visualization
+writing list of installed files to '/home/martin/autonomous_new/build/fsae_visualization/install.log'

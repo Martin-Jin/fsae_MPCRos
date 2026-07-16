@@ -1,0 +1,31 @@
+[1.893s] Invoking command in '/home/martin/autonomous_new/build/fsae_slam': AMENT_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy LD_LIBRARY_PATH=/home/martin/autonomous_new/install/fsae_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/cmake /home/martin/autonomous_new/src/fsae_autonomous/perception/fsae_slam -DCMAKE_INSTALL_PREFIX=/home/martin/autonomous_new/install/fsae_slam
+[2.282s] -- The C compiler identification is GNU 13.3.0
+[3.469s] -- The CXX compiler identification is GNU 13.3.0
+[4.870s] -- Detecting C compiler ABI info
+[5.353s] -- Detecting C compiler ABI info - done
+[5.363s] -- Check for working C compiler: /usr/bin/cc - skipped
+[5.364s] -- Detecting C compile features
+[5.364s] -- Detecting C compile features - done
+[5.524s] -- Detecting CXX compiler ABI info
+[6.007s] -- Detecting CXX compiler ABI info - done
+[6.018s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[6.018s] -- Detecting CXX compile features
+[6.019s] -- Detecting CXX compile features - done
+[6.024s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[6.212s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[6.373s] -- Found rclcpp: 28.1.18 (/opt/ros/jazzy/share/rclcpp/cmake)
+[6.663s] -- Found rosidl_generator_c: 4.6.7 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+[6.682s] -- Found rosidl_generator_cpp: 4.6.7 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)
+[6.706s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[6.733s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[6.884s] -- Found rmw_implementation_cmake: 7.3.3 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)
+[6.891s] -- Found rmw_fastrtps_cpp: 8.4.3 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)
+[7.042s] -- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.13")  
+[7.337s] -- Found FastRTPS: /opt/ros/jazzy/include (Required is at least version "2.13") 
+[7.518s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[7.844s] -- Found std_msgs: 5.3.7 (/opt/ros/jazzy/share/std_msgs/cmake)
+[7.862s] -- Found geometry_msgs: 5.3.7 (/opt/ros/jazzy/share/geometry_msgs/cmake)
+[7.880s] -- Found fsae_interfaces: 0.1.0 (/home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake)
+[8.015s] -- Configuring done (6.1s)
+[8.041s] -- Generating done (0.0s)
+[8.049s] -- Build files have been written to: /home/martin/autonomous_new/build/fsae_slam

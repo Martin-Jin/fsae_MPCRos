@@ -1,0 +1,13 @@
+package.xml
+setup.cfg
+setup.py
+../../../../build/fsae_control/fsae_control.egg-info/PKG-INFO
+../../../../build/fsae_control/fsae_control.egg-info/SOURCES.txt
+../../../../build/fsae_control/fsae_control.egg-info/dependency_links.txt
+../../../../build/fsae_control/fsae_control.egg-info/entry_points.txt
+../../../../build/fsae_control/fsae_control.egg-info/requires.txt
+../../../../build/fsae_control/fsae_control.egg-info/top_level.txt
+../../../../build/fsae_control/fsae_control.egg-info/zip-safe
+fsae_control/__init__.py
+fsae_control/stanley_controller.py
+resource/fsae_control

@@ -1,0 +1,514 @@
+[0.041s] Invoking command in '/home/martin/autonomous_new/build/fsae_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/martin/autonomous_new/src/fsae_autonomous/common/fsae_interfaces -DCMAKE_INSTALL_PREFIX=/home/martin/autonomous_new/install/fsae_interfaces
+[0.517s] -- The C compiler identification is GNU 13.3.0
+[2.027s] -- The CXX compiler identification is GNU 13.3.0
+[3.198s] -- Detecting C compiler ABI info
+[3.730s] -- Detecting C compiler ABI info - done
+[3.742s] -- Check for working C compiler: /usr/bin/cc - skipped
+[3.744s] -- Detecting C compile features
+[3.746s] -- Detecting C compile features - done
+[3.939s] -- Detecting CXX compiler ABI info
+[4.488s] -- Detecting CXX compiler ABI info - done
+[4.502s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[4.502s] -- Detecting CXX compile features
+[4.503s] -- Detecting CXX compile features - done
+[4.532s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[4.752s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[4.957s] -- Found std_msgs: 5.3.7 (/opt/ros/jazzy/share/std_msgs/cmake)
+[5.314s] -- Found rosidl_generator_c: 4.6.7 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+[5.343s] -- Found rosidl_generator_cpp: 4.6.7 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)
+[5.381s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[5.423s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[5.499s] -- Found geometry_msgs: 5.3.7 (/opt/ros/jazzy/share/geometry_msgs/cmake)
+[5.534s] -- Found rosidl_default_generators: 1.6.0 (/opt/ros/jazzy/share/rosidl_default_generators/cmake)
+[5.612s] -- Found rosidl_adapter: 4.6.7 (/opt/ros/jazzy/share/rosidl_adapter/cmake)
+[6.454s] -- Found ament_cmake_ros: 0.12.0 (/opt/ros/jazzy/share/ament_cmake_ros/cmake)
+[7.730s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[8.218s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[8.228s] -- Found python_cmake_module: 0.11.1 (/opt/ros/jazzy/share/python_cmake_module/cmake)
+[8.454s] -- Found PythonExtra: /usr/bin/python3  
+[9.312s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development NumPy Development.Module Development.Embed 
+[9.508s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[9.534s] -- Configuring done (9.4s)
+[9.678s] -- Generating done (0.1s)
+[9.699s] -- Build files have been written to: /home/martin/autonomous_new/build/fsae_interfaces
+[9.717s] Invoked command in '/home/martin/autonomous_new/build/fsae_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake /home/martin/autonomous_new/src/fsae_autonomous/common/fsae_interfaces -DCMAKE_INSTALL_PREFIX=/home/martin/autonomous_new/install/fsae_interfaces
+[9.719s] Invoking command in '/home/martin/autonomous_new/build/fsae_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/martin/autonomous_new/build/fsae_interfaces -- -j12 -l12
+[9.807s] [  1%] [34m[1mGenerating Rust code for ROS interfaces[0m
+[9.813s] [  2%] [34m[1mGenerating type hashes for ROS interfaces[0m
+[9.822s] [  2%] Built target ament_cmake_python_copy_fsae_interfaces
+[10.134s] running egg_info
+[10.135s] creating fsae_interfaces.egg-info
+[10.180s] writing fsae_interfaces.egg-info/PKG-INFO
+[10.181s] writing dependency_links to fsae_interfaces.egg-info/dependency_links.txt
+[10.181s] writing top-level names to fsae_interfaces.egg-info/top_level.txt
+[10.181s] writing manifest file 'fsae_interfaces.egg-info/SOURCES.txt'
+[10.197s] [  2%] Built target fsae_interfaces__rosidl_generator_type_description
+[10.216s] [  3%] [34m[1mGenerating C code for ROS interfaces[0m
+[10.233s] [  3%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[10.234s] [  3%] Built target fsae_interfaces__rs
+[10.272s] reading manifest file 'fsae_interfaces.egg-info/SOURCES.txt'
+[10.272s] writing manifest file 'fsae_interfaces.egg-info/SOURCES.txt'
+[10.309s] [  3%] Built target ament_cmake_python_build_fsae_interfaces_egg
+[10.868s] [  3%] Built target fsae_interfaces__cpp
+[11.070s] [  5%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/all_trajectories__description.c.o[0m
+[11.070s] [  5%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/all_trajectories__functions.c.o[0m
+[11.071s] [  5%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/can__functions.c.o[0m
+[11.071s] [  8%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/can_stamped__description.c.o[0m
+[11.072s] [  8%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/all_trajectories__type_support.c.o[0m
+[11.072s] [  8%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/can__type_support.c.o[0m
+[11.072s] [  9%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/can_stamped__functions.c.o[0m
+[11.072s] [ 10%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/can_stamped__type_support.c.o[0m
+[11.073s] [ 11%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/cone_detection__description.c.o[0m
+[11.073s] [ 12%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/can__description.c.o[0m
+[11.078s] [ 14%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/cone_detection__type_support.c.o[0m
+[11.078s] [ 14%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/cone_detection__functions.c.o[0m
+[11.152s] [ 14%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/hardware_states__description.c.o[0m
+[11.152s] [ 15%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/hardware_states__functions.c.o[0m
+[11.155s] [ 16%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/hardware_states_stamped__description.c.o[0m
+[11.164s] [ 17%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/hardware_states__type_support.c.o[0m
+[11.176s] [ 19%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/hardware_states_stamped__functions.c.o[0m
+[11.176s] [ 19%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.c.o[0m
+[11.188s] [ 20%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/mission_states__functions.c.o[0m
+[11.188s] [ 21%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/mission_states__description.c.o[0m
+[11.192s] [ 21%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/mission_states__type_support.c.o[0m
+[11.192s] [ 22%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/mission_states_stamped__description.c.o[0m
+[11.193s] [ 23%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/mission_states_stamped__functions.c.o[0m
+[11.200s] [ 24%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/mission_states_stamped__type_support.c.o[0m
+[11.224s] [ 25%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/track__description.c.o[0m
+[11.225s] [ 26%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/track__functions.c.o[0m
+[11.232s] [ 27%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_c.dir/rosidl_generator_c/fsae_interfaces/msg/detail/track__type_support.c.o[0m
+[11.296s] [ 27%] [32m[1mLinking C shared library libfsae_interfaces__rosidl_generator_c.so[0m
+[11.513s] [ 27%] Built target fsae_interfaces__rosidl_generator_c
+[11.532s] [ 30%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[11.533s] [ 30%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[11.533s] [ 30%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[11.533s] [ 31%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[11.533s] [ 31%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[11.534s] [ 32%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[12.039s] [ 33%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/can__type_support.cpp.o[0m
+[12.040s] [ 34%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/all_trajectories__type_support.cpp.o[0m
+[12.040s] [ 35%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/hardware_states__type_support.cpp.o[0m
+[12.040s] [ 36%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/can_stamped__type_support.cpp.o[0m
+[12.040s] [ 37%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/hardware_states_stamped__type_support.cpp.o[0m
+[12.040s] [ 38%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/cone_detection__type_support.cpp.o[0m
+[12.044s] [ 39%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/mission_states__type_support.cpp.o[0m
+[12.065s] [ 40%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/all_trajectories__type_support.cpp.o[0m
+[12.162s] [ 41%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/can__type_support.cpp.o[0m
+[12.246s] [ 42%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/can_stamped__type_support.cpp.o[0m
+[12.351s] [ 42%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/cone_detection__type_support.cpp.o[0m
+[12.457s] [ 43%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/all_trajectories__type_support.c.o[0m
+[12.459s] [ 44%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/hardware_states__type_support.cpp.o[0m
+[12.463s] [ 45%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/all_trajectories__type_support.cpp.o[0m
+[12.583s] [ 47%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/hardware_states_stamped__type_support.cpp.o[0m
+[12.584s] [ 47%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/can__type_support.c.o[0m
+[12.682s] [ 48%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/mission_states__type_support.cpp.o[0m
+[12.712s] [ 49%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/can_stamped__type_support.c.o[0m
+[12.747s] [ 50%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/cone_detection__type_support.c.o[0m
+[12.754s] [ 51%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/mission_states_stamped__type_support.cpp.o[0m
+[12.754s] [ 51%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/all_trajectories__type_support_c.cpp.o[0m
+[12.761s] [ 51%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/can__type_support.cpp.o[0m
+[12.762s] [ 52%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/can__type_support_c.cpp.o[0m
+[12.762s] [ 53%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/fsae_interfaces/msg/track__type_support.cpp.o[0m
+[12.766s] [ 54%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/mission_states_stamped__type_support.cpp.o[0m
+[12.772s] [ 55%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/all_trajectories__type_support.cpp.o[0m
+[12.773s] [ 55%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/can_stamped__type_support_c.cpp.o[0m
+[12.788s] [ 56%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/cone_detection__type_support_c.cpp.o[0m
+[12.806s] [ 57%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/fsae_interfaces/msg/track__type_support.cpp.o[0m
+[12.856s] [ 58%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/hardware_states__type_support.c.o[0m
+[12.873s] [ 58%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/hardware_states__type_support_c.cpp.o[0m
+[12.907s] [ 59%] [32m[1mLinking CXX shared library libfsae_interfaces__rosidl_typesupport_c.so[0m
+[12.943s] [ 59%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.c.o[0m
+[13.040s] [ 60%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/mission_states__type_support.c.o[0m
+[13.140s] [ 61%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/mission_states_stamped__type_support.c.o[0m
+[13.242s] [ 62%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/fsae_interfaces/msg/detail/track__type_support.c.o[0m
+[13.345s] [ 63%] [32m[1mLinking C shared library libfsae_interfaces__rosidl_typesupport_introspection_c.so[0m
+[13.356s] [ 63%] Built target fsae_interfaces__rosidl_typesupport_c
+[13.357s] [ 64%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/can_stamped__type_support.cpp.o[0m
+[13.377s] [ 65%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/cone_detection__type_support.cpp.o[0m
+[13.437s] [ 66%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/can__type_support.cpp.o[0m
+[13.456s] [ 67%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/hardware_states_stamped__type_support_c.cpp.o[0m
+[13.472s] [ 68%] [32m[1mLinking CXX shared library libfsae_interfaces__rosidl_typesupport_cpp.so[0m
+[13.775s] [ 68%] Built target fsae_interfaces__rosidl_typesupport_introspection_c
+[13.807s] [ 69%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/can_stamped__type_support.cpp.o[0m
+[13.814s] [ 70%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/hardware_states__type_support.cpp.o[0m
+[13.816s] [ 71%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/mission_states__type_support_c.cpp.o[0m
+[13.861s] [ 72%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.cpp.o[0m
+[13.916s] [ 73%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/cone_detection__type_support.cpp.o[0m
+[13.925s] [ 74%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/hardware_states__type_support.cpp.o[0m
+[13.983s] [ 74%] Built target fsae_interfaces__rosidl_typesupport_cpp
+[14.008s] [ 75%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/mission_states_stamped__type_support_c.cpp.o[0m
+[14.036s] [ 76%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/mission_states__type_support.cpp.o[0m
+[14.082s] [ 77%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/fsae_interfaces/msg/detail/track__type_support_c.cpp.o[0m
+[14.194s] [ 78%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/hardware_states_stamped__type_support.cpp.o[0m
+[14.483s] [ 79%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/mission_states_stamped__type_support.cpp.o[0m
+[14.500s] [ 80%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/mission_states__type_support.cpp.o[0m
+[14.511s] [ 81%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/mission_states_stamped__type_support.cpp.o[0m
+[14.601s] [ 81%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/fsae_interfaces/msg/detail/dds_fastrtps/track__type_support.cpp.o[0m
+[14.655s] [ 82%] [32mBuilding CXX object CMakeFiles/fsae_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/fsae_interfaces/msg/detail/track__type_support.cpp.o[0m
+[15.000s] [ 83%] [32m[1mLinking CXX shared library libfsae_interfaces__rosidl_typesupport_fastrtps_c.so[0m
+[15.241s] [ 83%] [32m[1mLinking CXX shared library libfsae_interfaces__rosidl_typesupport_introspection_cpp.so[0m
+[15.275s] [ 83%] Built target fsae_interfaces__rosidl_typesupport_fastrtps_c
+[15.432s] [ 84%] [32m[1mLinking CXX shared library libfsae_interfaces__rosidl_typesupport_fastrtps_cpp.so[0m
+[15.527s] [ 84%] Built target fsae_interfaces__rosidl_typesupport_introspection_cpp
+[15.712s] [ 84%] Built target fsae_interfaces__rosidl_typesupport_fastrtps_cpp
+[15.741s] [ 84%] Built target fsae_interfaces
+[15.772s] [ 85%] [34m[1mGenerating Python code for ROS interfaces[0m
+[16.739s] [ 85%] Built target fsae_interfaces__py
+[16.772s] [ 90%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_can_stamped_s.c.o[0m
+[16.773s] [ 90%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_cone_detection_s.c.o[0m
+[16.773s] [ 90%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_can_s.c.o[0m
+[16.773s] [ 90%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_mission_states_s.c.o[0m
+[16.774s] [ 90%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_all_trajectories_s.c.o[0m
+[16.774s] [ 91%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_hardware_states_s.c.o[0m
+[16.775s] [ 91%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_mission_states_stamped_s.c.o[0m
+[16.775s] [ 92%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_hardware_states_stamped_s.c.o[0m
+[16.775s] [ 93%] [32mBuilding C object CMakeFiles/fsae_interfaces__rosidl_generator_py.dir/rosidl_generator_py/fsae_interfaces/msg/_track_s.c.o[0m
+[17.074s] [ 94%] [32m[1mLinking C shared library libfsae_interfaces__rosidl_generator_py.so[0m
+[17.301s] [ 94%] Built target fsae_interfaces__rosidl_generator_py
+[17.334s] [ 96%] [32mBuilding C object CMakeFiles/fsae_interfaces_s__rosidl_typesupport_introspection_c.dir/rosidl_generator_py/fsae_interfaces/_fsae_interfaces_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[17.335s] [ 96%] [32mBuilding C object CMakeFiles/fsae_interfaces_s__rosidl_typesupport_c.dir/rosidl_generator_py/fsae_interfaces/_fsae_interfaces_s.ep.rosidl_typesupport_c.c.o[0m
+[17.335s] [ 97%] [32mBuilding C object CMakeFiles/fsae_interfaces_s__rosidl_typesupport_fastrtps_c.dir/rosidl_generator_py/fsae_interfaces/_fsae_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[17.529s] [ 99%] [32m[1mLinking C shared module rosidl_generator_py/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_c.so[0m
+[17.529s] [ 99%] [32m[1mLinking C shared module rosidl_generator_py/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_introspection_c.so[0m
+[17.539s] [100%] [32m[1mLinking C shared module rosidl_generator_py/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_fastrtps_c.so[0m
+[17.703s] [100%] Built target fsae_interfaces_s__rosidl_typesupport_c
+[17.707s] [100%] Built target fsae_interfaces_s__rosidl_typesupport_introspection_c
+[17.764s] [100%] Built target fsae_interfaces_s__rosidl_typesupport_fastrtps_c
+[17.789s] Invoked command in '/home/martin/autonomous_new/build/fsae_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/martin/autonomous_new/build/fsae_interfaces -- -j12 -l12
+[17.804s] Invoking command in '/home/martin/autonomous_new/build/fsae_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/martin/autonomous_new/build/fsae_interfaces
+[17.816s] -- Install configuration: ""
+[17.819s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/ament_index/resource_index/rosidl_interfaces/fsae_interfaces
+[17.821s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/AllTrajectories.json
+[17.821s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/CAN.json
+[17.821s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/CANStamped.json
+[17.822s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/ConeDetection.json
+[17.822s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/HardwareStates.json
+[17.822s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/HardwareStatesStamped.json
+[17.822s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/MissionStates.json
+[17.823s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/MissionStatesStamped.json
+[17.823s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/Track.json
+[17.823s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces
+[17.825s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg
+[17.826s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/rosidl_generator_c__visibility_control.h
+[17.826s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/hardware_states_stamped.h
+[17.826s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/all_trajectories.h
+[17.826s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/hardware_states.h
+[17.827s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/mission_states_stamped.h
+[17.827s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/can_stamped.h
+[17.827s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/cone_detection.h
+[17.827s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail
+[17.828s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__functions.c
+[17.828s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__functions.c
+[17.829s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__type_support.c
+[17.829s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__struct.h
+[17.829s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__struct.h
+[17.830s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__functions.c
+[17.830s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__struct.h
+[17.830s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__description.c
+[17.830s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__struct.h
+[17.830s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__functions.c
+[17.831s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__description.c
+[17.831s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__description.c
+[17.831s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__functions.h
+[17.831s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__functions.h
+[17.832s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__type_support.h
+[17.832s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__functions.c
+[17.832s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__type_support.c
+[17.833s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__description.c
+[17.833s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__type_support.c
+[17.833s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__functions.h
+[17.834s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__description.c
+[17.834s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__functions.c
+[17.834s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.h
+[17.835s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__type_support.h
+[17.835s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__functions.h
+[17.835s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__functions.c
+[17.835s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__functions.c
+[17.836s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.c
+[17.836s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__functions.c
+[17.836s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__type_support.c
+[17.837s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__type_support.h
+[17.837s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__type_support.h
+[17.837s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__description.c
+[17.837s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__type_support.h
+[17.838s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__struct.h
+[17.838s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__type_support.h
+[17.838s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__type_support.h
+[17.839s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__type_support.h
+[17.839s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__type_support.c
+[17.839s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__functions.h
+[17.840s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__functions.h
+[17.840s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__struct.h
+[17.840s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__struct.h
+[17.841s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__struct.h
+[17.841s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__description.c
+[17.841s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__description.c
+[17.842s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__struct.h
+[17.842s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__type_support.c
+[17.842s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__type_support.c
+[17.843s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__type_support.c
+[17.843s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__functions.h
+[17.843s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__functions.h
+[17.843s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__functions.h
+[17.844s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__description.c
+[17.844s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/mission_states.h
+[17.844s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/can.h
+[17.845s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/track.h
+[17.846s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/library_path.sh
+[17.846s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/library_path.dsv
+[17.847s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_generator_c.so
+[17.848s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_generator_c.so" to ""
+[17.848s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces
+[17.848s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg
+[17.848s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[17.848s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail
+[17.849s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__rosidl_typesupport_fastrtps_c.h
+[17.849s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__rosidl_typesupport_fastrtps_c.h
+[17.849s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__rosidl_typesupport_fastrtps_c.h
+[17.849s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__rosidl_typesupport_fastrtps_c.h
+[17.849s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__rosidl_typesupport_fastrtps_c.h
+[17.850s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__rosidl_typesupport_fastrtps_c.h
+[17.850s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__rosidl_typesupport_fastrtps_c.h
+[17.850s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__rosidl_typesupport_fastrtps_c.h
+[17.850s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__rosidl_typesupport_fastrtps_c.h
+[17.851s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_fastrtps_c.so
+[17.852s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_fastrtps_c.so" to ""
+[17.852s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces
+[17.852s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg
+[17.852s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/cone_detection.hpp
+[17.852s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/all_trajectories.hpp
+[17.853s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail
+[17.853s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__builder.hpp
+[17.853s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__type_support.hpp
+[17.853s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__builder.hpp
+[17.853s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__struct.hpp
+[17.854s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__traits.hpp
+[17.854s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__struct.hpp
+[17.854s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__type_support.hpp
+[17.854s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__builder.hpp
+[17.855s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__struct.hpp
+[17.855s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__struct.hpp
+[17.855s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__struct.hpp
+[17.856s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.hpp
+[17.856s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__traits.hpp
+[17.856s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__traits.hpp
+[17.856s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__type_support.hpp
+[17.857s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__builder.hpp
+[17.857s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__builder.hpp
+[17.857s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__builder.hpp
+[17.857s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__builder.hpp
+[17.858s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__builder.hpp
+[17.858s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__type_support.hpp
+[17.858s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__struct.hpp
+[17.859s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__struct.hpp
+[17.859s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__traits.hpp
+[17.859s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__struct.hpp
+[17.859s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__builder.hpp
+[17.859s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__struct.hpp
+[17.860s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__type_support.hpp
+[17.860s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__type_support.hpp
+[17.860s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__traits.hpp
+[17.861s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__traits.hpp
+[17.861s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__traits.hpp
+[17.861s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__traits.hpp
+[17.861s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__type_support.hpp
+[17.862s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__type_support.hpp
+[17.862s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__traits.hpp
+[17.862s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp
+[17.862s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/mission_states_stamped.hpp
+[17.863s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/track.hpp
+[17.863s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/can_stamped.hpp
+[17.863s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/hardware_states.hpp
+[17.864s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/mission_states.hpp
+[17.864s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/can.hpp
+[17.864s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/hardware_states_stamped.hpp
+[17.864s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces
+[17.865s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg
+[17.865s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[17.865s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail
+[17.866s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__rosidl_typesupport_fastrtps_cpp.hpp
+[17.866s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__rosidl_typesupport_fastrtps_cpp.hpp
+[17.866s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__rosidl_typesupport_fastrtps_cpp.hpp
+[17.866s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__rosidl_typesupport_fastrtps_cpp.hpp
+[17.867s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__rosidl_typesupport_fastrtps_cpp.hpp
+[17.867s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__rosidl_typesupport_fastrtps_cpp.hpp
+[17.867s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/dds_fastrtps
+[17.868s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__rosidl_typesupport_fastrtps_cpp.hpp
+[17.868s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__rosidl_typesupport_fastrtps_cpp.hpp
+[17.868s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__rosidl_typesupport_fastrtps_cpp.hpp
+[17.869s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_fastrtps_cpp.so
+[17.870s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_fastrtps_cpp.so" to ""
+[17.870s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces
+[17.870s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg
+[17.871s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[17.871s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail
+[17.871s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__type_support.c
+[17.871s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__rosidl_typesupport_introspection_c.h
+[17.872s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__rosidl_typesupport_introspection_c.h
+[17.872s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__rosidl_typesupport_introspection_c.h
+[17.872s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__rosidl_typesupport_introspection_c.h
+[17.872s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__type_support.c
+[17.872s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__type_support.c
+[17.873s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__rosidl_typesupport_introspection_c.h
+[17.873s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__rosidl_typesupport_introspection_c.h
+[17.873s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__rosidl_typesupport_introspection_c.h
+[17.874s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.c
+[17.874s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__rosidl_typesupport_introspection_c.h
+[17.874s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__type_support.c
+[17.874s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__rosidl_typesupport_introspection_c.h
+[17.875s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__type_support.c
+[17.875s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__type_support.c
+[17.875s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__type_support.c
+[17.876s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__type_support.c
+[17.876s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_introspection_c.so
+[17.877s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_introspection_c.so" to ""
+[17.877s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_c.so
+[17.878s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_c.so" to ""
+[17.879s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces
+[17.879s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg
+[17.879s] -- Up-to-date: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail
+[17.879s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__rosidl_typesupport_introspection_cpp.hpp
+[17.880s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__type_support.cpp
+[17.880s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__type_support.cpp
+[17.880s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__type_support.cpp
+[17.880s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states_stamped__type_support.cpp
+[17.881s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__type_support.cpp
+[17.881s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__rosidl_typesupport_introspection_cpp.hpp
+[17.881s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__type_support.cpp
+[17.882s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states__rosidl_typesupport_introspection_cpp.hpp
+[17.882s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__type_support.cpp
+[17.882s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/mission_states_stamped__type_support.cpp
+[17.883s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can__rosidl_typesupport_introspection_cpp.hpp
+[17.883s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/hardware_states__rosidl_typesupport_introspection_cpp.hpp
+[17.883s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__type_support.cpp
+[17.884s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/cone_detection__rosidl_typesupport_introspection_cpp.hpp
+[17.884s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/all_trajectories__rosidl_typesupport_introspection_cpp.hpp
+[17.884s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/can_stamped__rosidl_typesupport_introspection_cpp.hpp
+[17.885s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/include/fsae_interfaces/fsae_interfaces/msg/detail/track__rosidl_typesupport_introspection_cpp.hpp
+[17.886s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_introspection_cpp.so
+[17.887s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_introspection_cpp.so" to ""
+[17.888s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_cpp.so
+[17.889s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_typesupport_cpp.so" to ""
+[17.889s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/pythonpath.sh
+[17.889s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/pythonpath.dsv
+[17.890s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces-0.1.0-py3.12.egg-info
+[17.892s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces-0.1.0-py3.12.egg-info/PKG-INFO
+[17.892s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces-0.1.0-py3.12.egg-info/SOURCES.txt
+[17.893s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces-0.1.0-py3.12.egg-info/top_level.txt
+[17.893s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces-0.1.0-py3.12.egg-info/dependency_links.txt
+[17.894s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces
+[17.894s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg
+[17.895s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_mission_states_stamped.py
+[17.895s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_hardware_states_stamped.py
+[17.896s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_all_trajectories_s.c
+[17.896s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_mission_states.py
+[17.896s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_cone_detection_s.c
+[17.897s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_can_stamped.py
+[17.897s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_cone_detection.py
+[17.898s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_can.py
+[17.898s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_track.py
+[17.898s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_can_stamped_s.c
+[17.899s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/__init__.py
+[17.899s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_hardware_states_s.c
+[17.899s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_hardware_states.py
+[17.900s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_all_trajectories.py
+[17.900s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_hardware_states_stamped_s.c
+[17.900s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_mission_states_stamped_s.c
+[17.901s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_can_s.c
+[17.901s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_track_s.c
+[17.902s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_mission_states_s.c
+[17.902s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/_fsae_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c
+[17.902s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_c.so
+[17.903s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_introspection_c.so
+[17.903s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[17.904s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/_fsae_interfaces_s.ep.rosidl_typesupport_introspection_c.c
+[17.905s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/__init__.py
+[17.905s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/_fsae_interfaces_s.ep.rosidl_typesupport_c.c
+[17.968s] Listing '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces'...
+[17.968s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/__init__.py'...
+[17.969s] Listing '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg'...
+[17.969s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/__init__.py'...
+[17.969s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_all_trajectories.py'...
+[17.969s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_can.py'...
+[17.969s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_can_stamped.py'...
+[17.970s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_cone_detection.py'...
+[17.970s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_hardware_states.py'...
+[17.970s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_hardware_states_stamped.py'...
+[17.971s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_mission_states.py'...
+[17.971s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_mission_states_stamped.py'...
+[17.971s] Compiling '/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/msg/_track.py'...
+[17.976s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[17.977s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_fastrtps_c.so" to ""
+[17.978s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_introspection_c.so
+[17.979s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_introspection_c.so" to ""
+[17.979s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_c.so
+[17.981s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages/fsae_interfaces/fsae_interfaces_s__rosidl_typesupport_c.so" to ""
+[17.981s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_generator_py.so
+[17.982s] -- Set non-toolchain portion of runtime path of "/home/martin/autonomous_new/install/fsae_interfaces/lib/libfsae_interfaces__rosidl_generator_py.so" to ""
+[17.983s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/ament_index/resource_index/rust_packages/fsae_interfaces
+[17.983s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust
+[17.984s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust/Cargo.toml
+[17.985s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust/build.rs
+[17.985s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust/src
+[17.986s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust/src/msg
+[17.987s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust/src/msg/rmw.rs
+[17.987s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust/src/msg.rs
+[17.988s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/rust/src/lib.rs
+[17.988s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/AllTrajectories.idl
+[17.988s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/CAN.idl
+[17.989s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/CANStamped.idl
+[17.989s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/ConeDetection.idl
+[17.989s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/HardwareStates.idl
+[17.990s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/HardwareStatesStamped.idl
+[17.990s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/MissionStates.idl
+[17.990s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/MissionStatesStamped.idl
+[17.991s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/Track.idl
+[17.991s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/AllTrajectories.msg
+[17.991s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/CAN.msg
+[17.992s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/CANStamped.msg
+[17.992s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/ConeDetection.msg
+[17.993s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/HardwareStates.msg
+[17.993s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/HardwareStatesStamped.msg
+[17.993s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/MissionStates.msg
+[17.994s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/MissionStatesStamped.msg
+[17.994s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/msg/Track.msg
+[17.995s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/ament_index/resource_index/package_run_dependencies/fsae_interfaces
+[17.996s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/ament_index/resource_index/parent_prefix_path/fsae_interfaces
+[17.996s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/ament_prefix_path.sh
+[17.997s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/ament_prefix_path.dsv
+[17.997s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/path.sh
+[17.997s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/environment/path.dsv
+[17.998s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/local_setup.bash
+[17.998s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/local_setup.sh
+[17.999s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/local_setup.zsh
+[17.999s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/local_setup.dsv
+[17.999s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/package.dsv
+[18.000s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/ament_index/resource_index/packages/fsae_interfaces
+[18.001s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_generator_cExport.cmake
+[18.002s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_generator_cExport-noconfig.cmake
+[18.002s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_typesupport_fastrtps_cExport.cmake
+[18.002s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[18.003s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_generator_cppExport.cmake
+[18.003s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake
+[18.004s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[18.004s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_introspection_cExport.cmake
+[18.004s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[18.005s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_cExport.cmake
+[18.005s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_cExport-noconfig.cmake
+[18.006s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_introspection_cppExport.cmake
+[18.007s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[18.007s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_cppExport.cmake
+[18.007s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfaces__rosidl_typesupport_cppExport-noconfig.cmake
+[18.008s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_generator_pyExport.cmake
+[18.008s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/export_fsae_interfaces__rosidl_generator_pyExport-noconfig.cmake
+[18.008s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/rosidl_cmake-extras.cmake
+[18.009s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake
+[18.009s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake
+[18.010s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/ament_cmake_export_libraries-extras.cmake
+[18.010s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/ament_cmake_export_targets-extras.cmake
+[18.010s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[18.011s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[18.011s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfacesConfig.cmake
+[18.011s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/cmake/fsae_interfacesConfig-version.cmake
+[18.012s] -- Installing: /home/martin/autonomous_new/install/fsae_interfaces/share/fsae_interfaces/package.xml
+[18.016s] Invoked command in '/home/martin/autonomous_new/build/fsae_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/martin/autonomous_new/build/fsae_interfaces

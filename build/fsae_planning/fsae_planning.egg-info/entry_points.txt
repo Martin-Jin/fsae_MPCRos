@@ -1,0 +1,4 @@
+[console_scripts]
+centerline_planner = fsae_planning.centerline_planner:main
+fasttube = fsae_planning.fasttube_planner:main
+fasttube_without_kalman = fsae_planning.fasttube_without_kalman:main

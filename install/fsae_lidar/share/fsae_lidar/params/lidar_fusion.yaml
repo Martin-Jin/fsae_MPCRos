@@ -1,0 +1,49 @@
+/**:
+  ros__parameters:
+    # --- Component A: refinement ---
+    r_sphere: 1.0              # m, search-sphere radius around the camera seed
+    z_offset: 0.03             # m, height above the fitted ground plane a point must exceed to be cone
+    ground_percentile: 0.40    # fraction of lowest points the local ground plane is fitted to
+    reclaim_range_margin: 0.05    # m, base-reclaim window depth slack beyond the cone's own depth
+    reclaim_bearing_margin: 0.05  # m, base-reclaim cross-range slack beyond the cone's angular width
+    cluster_eps: 0.12          # m, xy connected-components radius (A6 clustering)
+    min_cone_points: 3         # min cluster points within far_range_threshold
+    min_cone_points_far: 2     # min cluster points beyond it — far cones physically return 2-3 points
+    far_range_threshold: 6.0   # m, range at which the relaxed point minimum kicks in
+    max_cone_points: 250       # generous — a cone at 2 m can catch >100 points; this gate rejects walls
+    max_height: 0.35           # m, max vertical extent of cone cluster
+    max_width: 0.30            # m, max xy extent of cone cluster
+    dip_threshold: 0.30        # m, within-ring range dip for the far-cone ground-dip rescue
+    r_cone: 0.05               # m, fallback axis-projection radius when no ground plane exists
+    # Cone geometry = the training cones currently in use (125 mm base dia,
+    # 310 mm tall). Regulation FSAE: small 228/325 mm, big orange 285/505 mm —
+    # restore those when running regulation cones.
+    cone_base_radius: 0.0625   # m
+    cone_height: 0.31          # m
+    big_cone_base_radius: 0.0625  # m, no big cones in the current fleet
+    big_cone_height: 0.31      # m
+    lidar_max_range: 12.0      # m, beyond this LiDAR cannot see cones. NOTE: no camera-only
+                               # fallback by policy — detections without LiDAR confirmation
+                               # are dropped entirely (an inaccurate position is worse than a missing cone)
+
+    # --- Component B: fusion / timing ---
+    time_sync_tolerance_ms: 50   # max |camera stamp - cloud stamp| to pair; beyond this the detection queues
+    detection_max_age_ms: 200    # queued detections older than this (vs newest cloud) are dropped
+    enable_orphan_lidar: false   # B4 orphan-LiDAR pass — TODO stub, not implemented
+
+    # --- topics / frames ---
+    # camera_frame: frame the cones are reported in. cone_detection.cpp deprojects
+    # into the camera BODY frame (camera_link: x fwd, y left, z up), not the optical
+    # frame. lidar_frame matches the trolley URDF + driver default.
+    camera_topic: '/fsae/perception/cone_detection'
+    lidar_topic: '/velodyne_points'
+    output_topic: '/cone_detection_fused'   # fused ConeDetection (LiDAR positions in camera frame + camera colours), ~10 Hz
+    camera_frame: 'camera_link'
+    lidar_frame: 'velodyne'
+
+    # --- debug ---
+    publish_debug_markers: true   # publish seed + crop-boundary markers for RViz
+    debug_marker_topic: '/lidar_fusion/seed_markers'
+    publish_debug_cloud: true     # publish the ground-removal split as two clouds for RViz
+    debug_cone_cloud_topic: '/lidar_fusion/cone_points'      # kept (ABOVE_GROUND) points
+    debug_ground_cloud_topic: '/lidar_fusion/ground_points'  # discarded (AT_GROUND) points

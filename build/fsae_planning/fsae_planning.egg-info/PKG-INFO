@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: fsae-planning
+Version: 0.1.0
+Summary: Path planning: fasttube, fasttube_without_kalman, and centerline planners
+Maintainer: UoA FSAE
+Maintainer-email: fsae@auckland.ac.nz
+License: MIT

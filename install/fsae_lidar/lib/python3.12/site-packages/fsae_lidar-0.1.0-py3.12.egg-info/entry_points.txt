@@ -1,0 +1,2 @@
+[console_scripts]
+fusion_node = fsae_lidar.fusion_node:main

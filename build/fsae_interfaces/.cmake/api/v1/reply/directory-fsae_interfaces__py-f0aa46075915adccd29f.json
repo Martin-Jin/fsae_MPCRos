@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "fsae_interfaces__py",
+		"source" : "/home/martin/autonomous_new/build/fsae_interfaces/fsae_interfaces__py"
+	}
+}

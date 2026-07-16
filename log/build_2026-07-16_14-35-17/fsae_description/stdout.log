@@ -1,0 +1,47 @@
+running egg_info
+creating ../../../../build/fsae_description/fsae_description.egg-info
+writing ../../../../build/fsae_description/fsae_description.egg-info/PKG-INFO
+writing dependency_links to ../../../../build/fsae_description/fsae_description.egg-info/dependency_links.txt
+writing entry points to ../../../../build/fsae_description/fsae_description.egg-info/entry_points.txt
+writing requirements to ../../../../build/fsae_description/fsae_description.egg-info/requires.txt
+writing top-level names to ../../../../build/fsae_description/fsae_description.egg-info/top_level.txt
+writing manifest file '../../../../build/fsae_description/fsae_description.egg-info/SOURCES.txt'
+reading manifest file '../../../../build/fsae_description/fsae_description.egg-info/SOURCES.txt'
+writing manifest file '../../../../build/fsae_description/fsae_description.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/martin/autonomous_new/build/fsae_description/build
+creating /home/martin/autonomous_new/build/fsae_description/build/lib
+creating /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description
+copying fsae_description/__init__.py -> /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description
+copying fsae_description/state_publisher.py -> /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description
+running install
+running install_lib
+creating /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description
+copying /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description/__init__.py -> /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description
+copying /home/martin/autonomous_new/build/fsae_description/build/lib/fsae_description/state_publisher.py -> /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description
+byte-compiling /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description/__init__.py to __init__.cpython-312.pyc
+byte-compiling /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description/state_publisher.py to state_publisher.cpython-312.pyc
+running install_data
+creating /home/martin/autonomous_new/install/fsae_description/share/ament_index
+creating /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index
+creating /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index/packages
+copying resource/fsae_description -> /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index/packages
+copying package.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description
+creating /home/martin/autonomous_new/install/fsae_description/share/fsae_description/launch
+copying launch/urdf_model.launch.py -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/launch
+creating /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+copying urdf/urdf.rviz -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+copying urdf/trolly.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+copying urdf/gocartv1.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+creating /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+copying meshes/go_cart_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+copying meshes/go_cart_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+copying meshes/trolly_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+copying meshes/trolly_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+copying meshes/go_cart_lidar.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+running install_egg_info
+Copying ../../../../build/fsae_description/fsae_description.egg-info to /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae_description-0.1.0-py3.12.egg-info
+running install_scripts
+Installing state_publisher script to /home/martin/autonomous_new/install/fsae_description/lib/fsae_description
+writing list of installed files to '/home/martin/autonomous_new/build/fsae_description/install.log'

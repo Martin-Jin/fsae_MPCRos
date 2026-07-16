@@ -1,0 +1,39 @@
+[3.399s] Invoking command in '/home/martin/autonomous_new/src/fsae_autonomous/planning/fsae_mission_control': AMENT_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/martin/autonomous_new/install/fsae_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/martin/autonomous_new/build/fsae_mission_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages:/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/fsae_mission_control build --build-base /home/martin/autonomous_new/build/fsae_mission_control/build install --record /home/martin/autonomous_new/build/fsae_mission_control/install.log --single-version-externally-managed install_data
+[3.979s] running egg_info
+[3.980s] creating ../../../../build/fsae_mission_control/fsae_mission_control.egg-info
+[4.027s] writing ../../../../build/fsae_mission_control/fsae_mission_control.egg-info/PKG-INFO
+[4.028s] writing dependency_links to ../../../../build/fsae_mission_control/fsae_mission_control.egg-info/dependency_links.txt
+[4.028s] writing entry points to ../../../../build/fsae_mission_control/fsae_mission_control.egg-info/entry_points.txt
+[4.028s] writing requirements to ../../../../build/fsae_mission_control/fsae_mission_control.egg-info/requires.txt
+[4.028s] writing top-level names to ../../../../build/fsae_mission_control/fsae_mission_control.egg-info/top_level.txt
+[4.030s] writing manifest file '../../../../build/fsae_mission_control/fsae_mission_control.egg-info/SOURCES.txt'
+[4.112s] reading manifest file '../../../../build/fsae_mission_control/fsae_mission_control.egg-info/SOURCES.txt'
+[4.117s] writing manifest file '../../../../build/fsae_mission_control/fsae_mission_control.egg-info/SOURCES.txt'
+[4.118s] running build
+[4.118s] running build_py
+[4.119s] creating /home/martin/autonomous_new/build/fsae_mission_control/build
+[4.120s] creating /home/martin/autonomous_new/build/fsae_mission_control/build/lib
+[4.121s] creating /home/martin/autonomous_new/build/fsae_mission_control/build/lib/fsae_mission_control
+[4.122s] copying fsae_mission_control/inspection_mission.py -> /home/martin/autonomous_new/build/fsae_mission_control/build/lib/fsae_mission_control
+[4.123s] copying fsae_mission_control/__init__.py -> /home/martin/autonomous_new/build/fsae_mission_control/build/lib/fsae_mission_control
+[4.123s] running install
+[4.142s] running install_lib
+[4.217s] creating /home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages/fsae_mission_control
+[4.219s] copying /home/martin/autonomous_new/build/fsae_mission_control/build/lib/fsae_mission_control/inspection_mission.py -> /home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages/fsae_mission_control
+[4.220s] copying /home/martin/autonomous_new/build/fsae_mission_control/build/lib/fsae_mission_control/__init__.py -> /home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages/fsae_mission_control
+[4.221s] byte-compiling /home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages/fsae_mission_control/inspection_mission.py to inspection_mission.cpython-312.pyc
+[4.227s] byte-compiling /home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages/fsae_mission_control/__init__.py to __init__.cpython-312.pyc
+[4.229s] running install_data
+[4.229s] creating /home/martin/autonomous_new/install/fsae_mission_control/share/ament_index
+[4.230s] creating /home/martin/autonomous_new/install/fsae_mission_control/share/ament_index/resource_index
+[4.235s] creating /home/martin/autonomous_new/install/fsae_mission_control/share/ament_index/resource_index/packages
+[4.235s] copying resource/fsae_mission_control -> /home/martin/autonomous_new/install/fsae_mission_control/share/ament_index/resource_index/packages
+[4.235s] copying package.xml -> /home/martin/autonomous_new/install/fsae_mission_control/share/fsae_mission_control
+[4.235s] creating /home/martin/autonomous_new/install/fsae_mission_control/share/fsae_mission_control/launch
+[4.237s] copying launch/inspection.launch.py -> /home/martin/autonomous_new/install/fsae_mission_control/share/fsae_mission_control/launch
+[4.237s] running install_egg_info
+[4.290s] Copying ../../../../build/fsae_mission_control/fsae_mission_control.egg-info to /home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages/fsae_mission_control-0.1.0-py3.12.egg-info
+[4.293s] running install_scripts
+[4.633s] Installing inspection_mission_node script to /home/martin/autonomous_new/install/fsae_mission_control/lib/fsae_mission_control
+[4.634s] writing list of installed files to '/home/martin/autonomous_new/build/fsae_mission_control/install.log'
+[4.701s] Invoked command in '/home/martin/autonomous_new/src/fsae_autonomous/planning/fsae_mission_control' returned '0': AMENT_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/martin/autonomous_new/install/fsae_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/martin/autonomous_new/install/fsae_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/martin/autonomous_new/build/fsae_mission_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/martin/autonomous_new/install/fsae_mission_control/lib/python3.12/site-packages:/home/martin/autonomous_new/install/fsae_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../../build/fsae_mission_control build --build-base /home/martin/autonomous_new/build/fsae_mission_control/build install --record /home/martin/autonomous_new/build/fsae_mission_control/install.log --single-version-externally-managed install_data

@@ -1,0 +1,26 @@
+running develop
+running egg_info
+writing fsae_description.egg-info/PKG-INFO
+writing dependency_links to fsae_description.egg-info/dependency_links.txt
+writing entry points to fsae_description.egg-info/entry_points.txt
+writing requirements to fsae_description.egg-info/requires.txt
+writing top-level names to fsae_description.egg-info/top_level.txt
+reading manifest file 'fsae_description.egg-info/SOURCES.txt'
+writing manifest file 'fsae_description.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/martin/autonomous_new/install/fsae_description/lib/python3.12/site-packages/fsae-description.egg-link (link to .)
+Installing state_publisher script to /home/martin/autonomous_new/install/fsae_description/lib/fsae_description
+
+Installed /home/martin/autonomous_new/build/fsae_description
+running symlink_data
+symbolically linking /home/martin/autonomous_new/build/fsae_description/resource/fsae_description -> /home/martin/autonomous_new/install/fsae_description/share/ament_index/resource_index/packages
+symbolically linking /home/martin/autonomous_new/build/fsae_description/package.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description
+symbolically linking /home/martin/autonomous_new/build/fsae_description/launch/urdf_model.launch.py -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/launch
+symbolically linking /home/martin/autonomous_new/build/fsae_description/urdf/urdf.rviz -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+symbolically linking /home/martin/autonomous_new/build/fsae_description/urdf/trolly.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+symbolically linking /home/martin/autonomous_new/build/fsae_description/urdf/gocartv1.urdf.xml -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/urdf
+symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/go_cart_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/go_cart_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/trolly_base.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/trolly_camera.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes
+symbolically linking /home/martin/autonomous_new/build/fsae_description/meshes/go_cart_lidar.stl -> /home/martin/autonomous_new/install/fsae_description/share/fsae_description/meshes

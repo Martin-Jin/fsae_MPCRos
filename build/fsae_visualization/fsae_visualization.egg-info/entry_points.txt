@@ -1,0 +1,5 @@
+[console_scripts]
+base_tf = fsae_visualization.base_tf:main
+cone_map_viz = fsae_visualization.visualise_cone_map:main
+path_viz = fsae_visualization.visualise_trajectories:main
+pursuit_viz = fsae_visualization.visualise_pure_pursuit:main

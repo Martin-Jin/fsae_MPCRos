@@ -1,0 +1,13 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from fsae_interfaces/msg/Track.msg
+// generated code does not contain a copyright notice
+
+#include "geometry_msgs/msg/Point.idl"
+
+module fsae_interfaces {
+  module msg {
+    struct Track {
+      sequence<geometry_msgs::msg::Point> cones;
+    };
+  };
+};

@@ -1,0 +1,7 @@
+[console_scripts]
+ack_to_can_node = fsae_can_bridge.ack_to_can:main
+as_status_node = fsae_can_bridge.sys_status:main
+can_decoder = fsae_can_bridge.can_decoder_jnano:main
+candapter_node = fsae_can_bridge.candapter:main
+joystick_teleop = fsae_can_bridge.joystick_teleop:main
+mock_stimulus = fsae_can_bridge.mock_stimulus:main
