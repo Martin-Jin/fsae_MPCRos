@@ -69,7 +69,7 @@ from tf2_geometry_msgs import do_transform_point
 
 from fsae_interfaces.msg import ConeDetection
 
-from fsae_lidar.refinement import (
+from src.fsae_autonomous.perception.fsae_lidar.fsae_lidar.refinement import (
     ALL_POINTS_AT_GROUND, NO_CLUSTER, NO_POINTS_IN_SPHERE,
     crop_sphere, reclaim_cone_base, rescue_ground_dip, split_ground,
     verify_and_locate)

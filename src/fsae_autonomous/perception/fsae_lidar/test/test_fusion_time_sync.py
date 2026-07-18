@@ -33,7 +33,7 @@ from std_msgs.msg import Header
 from builtin_interfaces.msg import Time as TimeMsg
 from fsae_interfaces.msg import ConeDetection
 
-from fsae_lidar.fusion_node import LidarFusionNode
+from src.fsae_autonomous.perception.fsae_lidar.fsae_lidar.fusion_node import LidarFusionNode
 
 
 def make_stamp(seconds: float) -> TimeMsg:
