@@ -560,14 +560,17 @@ class MPCController:
         # Fast enough to comfortably run every tick; "warm_start=True"
         # lets it reuse the previous solve as a starting point, which
         # makes it converge faster tick-to-tick.
-        qp["prob"].solve(
-            solver=cp.OSQP,
-            verbose=False,
-            warm_start=True,
-            eps_abs=1e-5,
-            eps_rel=1e-5,
-            max_iter=8000,
-        )
+        try:
+            qp["prob"].solve(
+                solver=cp.OSQP, verbose=False, warm_start=True,
+                eps_abs=1e-5, eps_rel=1e-5, max_iter=8000,
+            )
+        except cp.error.SolverError as exc:
+            print(f"[MPC] Warning: OSQP raised an error: {exc!r}")
+            status, u_val = None, None
+        else:
+            status = qp["prob"].status
+            u_val = qp["u"][:, 0].value
 
         status = qp["prob"].status
         u_val  = qp["u"][:, 0].value
