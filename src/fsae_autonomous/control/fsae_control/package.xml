@@ -24,10 +24,10 @@
   <depend>python3-scipy</depend>
 
   <!-- The NMPC controller (mpc/nmpc_core.py) additionally needs osqp. This is
-       pip-only (no rosdep key) -- see requirements.txt. Install once into the
-       ROS interpreter: pip install osqp (Ubuntu 24.04: add
-       --break-system-packages). The Stanley controller (default) has no such
-       dependency; this repo does not carry the LTV-QP controller
+       pip-only (no rosdep key), see requirements.txt. Install once into the
+       ROS interpreter: pip install osqp (Ubuntu 24.04: add the
+       break-system-packages flag). The Stanley controller (default) has no
+       such dependency; this repo does not carry the LTV-QP controller
        (mpc_core.py) or its cvxpy/clarabel dependency at all. -->
 
   <test_depend>ament_copyright</test_depend>
