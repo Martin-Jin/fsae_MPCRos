@@ -1,0 +1,377 @@
+# Central parameter config for the FSAE autonomous system.
+#
+# This is the single source of truth for tunable parameters (decision: central
+# config lives in fsae_bringup, not per-package). Launch files in fsae_bringup
+# load this file and pass it to the relevant nodes.
+#
+# STARTER ONLY - values below are the currently-hardcoded numbers identified in
+# the old repo (see "OPEN QUESTIONS" in refactor plan.txt). They are populated
+# package-by-package during Stage 2 as each node's params are extracted from code.
+# Node keys are placeholders until the Stage 2 node names are finalised.
+
+# --- control/fsae_control (Stanley controller) ---
+# Node name is 'stanley_controller'. Values extracted from the old
+# stanley_controller.py (k_speed was unused and dropped).
+stanley_controller:
+  ros__parameters:
+    target_velocity: 8.0        # m/s (old code default; open Q: car runs 9.0/10.0 - confirm)
+    stanley_gain: 5.0           # was k_stanley
+    front_axle_dist: 1.0        # m, camera to front axle (was cam_fron_axle_dist)
+    max_steer_angle: 30.0       # degrees (was max_steer)
+    # DISABLED (Arduino bench rig retired, MoTeC is back) - see actuator_cmd_enabled below.
+    # Fixed throttle % that would be published to the serial bridge if re-enabled. No speed
+    # model exists, so this can't be computed - it was tuned by hand on the bench.
+    fixed_throttle_percent: 0.0
+    # DISABLED: publishes /fsae/control/actuator_cmd for fsae_serial_bridge (Arduino bench
+    # rig). We're back on MoTeC/CAN (cmd_vel), so this stays off. Left wired rather than
+    # deleted in case the bench rig comes back.
+    actuator_cmd_enabled: false
+
+# --- control/fsae_control (NMPC controller, ported from fsae_planning) ---
+# Node name is 'nmpc_controller'. Selected by control.launch.py's controller:=nmpc arg;
+# default remains controller:=stanley above, so this block has no effect unless asked
+# for. See docs/NMPC_INTEGRATION_GAPS.md for the full rationale behind every override
+# below and every field this repo cannot yet supply a real measurement for.
+#
+# Every value below is copied from mpc_params.py's MPCParams / nmpc_params.py's
+# NMPCParams field defaults (the sim-tree tuned set, on the FSDS plant, on one
+# recorded track — see NMPC_INTEGRATION_GAPS.md D5), with exactly two overrides:
+# use_nmpc: true (this node always runs the NMPC regardless, but set true here for
+# field-name consistency) and nmpc_alat_ceiling_enabled: false (GAP D2 — that flag
+# models an FSDS simulator artifact, not real vehicle physics; leaving it on would
+# impose a fictitious yaw-restoring moment on the real car).
+nmpc_controller:
+  ros__parameters:
+    # --- shared controller-node params (also declared by stanley_controller) ---
+    v_max: 20.0                  # m/s -- top speed on straights
+    v_min: 1.5                   # m/s -- minimum speed through tight corners
+    steer_lp: 0.3                # output steering low-pass (EMA); 1.0 disables
+    enable_dynamic_speed_cap: true
+    dynamic_cap_a_lat_max: 3.2   # m/s^2
+    dynamic_cap_safety: 0.9
+    max_steer_angle: 30.0        # degrees; GAP B4 -- clamped against control_limits.MAX_STEER_RAD (25deg) at runtime
+    accel_to_speed_horizon_s: 0.25   # s; GAP B3 -- untuned starting value, expect to retune on the rig
+    map_path: ""                 # '' -> live curvature_speed(); GAP C2 -- no track CSV exists in this repo yet
+    path_map_path: ""            # '' -> live /fsae/planning/selected_trajectory; GAP C2
+    use_precomputed_heading_profile: false   # no effect on the NMPC (accepted, ignored -- see nmpc_core.py)
+
+    # --- MPCParams: base Q/R/R_rate weights (also read by the NMPC via nmpc_* overrides below) ---
+    q_e_y: 6.35
+    q_e_yd: 0.5
+    q_e_psi: 1.65
+    q_r: 1.2
+    q_e_v: 5.5
+    r_delta: 1.35
+    r_a_accel: 2.25
+    r_a_brake: 0.5
+    r_rate_delta: 52.5
+    r_rate_a: 5.0
+    terminal_q_scale: 1.0
+
+    # --- MPCParams: LTV-QP-only adaptive-gain fields ---
+    # This repo has no LTV-QP controller (mpc_core.py) at all -- these fields exist
+    # only so MPCParams can be constructed/declared identically to the sim tree
+    # (parity with fsae_MPCTest/settings.py's 1:1 field mapping). The NMPC never
+    # reads them directly.
+    adaptive_q_scaling_enabled: true
+    steer_rate_anti_hunt_enabled: true
+    adaptive_r_rate_enable_in_corners: true
+    delay_compensation_enabled: true
+    ref_heading_rate_limit_enabled: false
+    ref_heading_rise_rate_deg_s: 90.0
+    max_delay_compensation_steps: 3
+    predict_epsi_clip: 0.5
+    pose_age_lp_alpha: 0.15
+    n_delay_hysteresis: 0.25
+    adaptive_r_rate_during_floor: 0.625
+    anti_hunt_boost_max: 6.0
+    reversal_penalty_enabled: false
+    reversal_penalty_boost_max: 4.0
+    reversal_penalty_k: 8.0
+    corner_factor_k: 8.0
+    q_ey_straight: 4.5
+    q_ey_corner: 9.0
+    q_epsi_straight: 1.5
+    q_epsi_corner: 3.0
+    q_r_straight: 1.0
+    q_r_corner: 0.5
+    rrate_steer_straight: 2.0
+    rrate_steer_corner: 1.25
+    r_steer_corner_mid: 1.35
+    low_speed_corner_boost_v_half: 4.0
+    low_speed_corner_boost_max_extra: 0.3
+    epsi_ra_half_rad: 0.17453292519943295
+    epsi_ra_accel_boost_max: 2.0
+    epsi_ra_brake_floor: 0.5
+
+    # --- MPCParams: NMPC weight overrides (-1.0 = inherit the base weight above) ---
+    nmpc_q_e_y: -1.0
+    nmpc_q_e_yd: -1.0
+    nmpc_q_e_psi: -1.0
+    nmpc_q_epsi_dot: -1.0
+    nmpc_q_e_v: -1.0
+    nmpc_r_delta: -1.0
+    nmpc_r_a_accel: -1.0
+    nmpc_r_a_brake: -1.0
+    nmpc_r_rate_delta: -1.0
+    nmpc_r_rate_a: -1.0
+    nmpc_terminal_scale: -1.0
+    nmpc_steer_rate_anti_hunt_enabled: false
+    nmpc_anti_hunt_boost_max: -1.0
+    nmpc_reversal_penalty_enabled: false
+    nmpc_reversal_penalty_boost_max: -1.0
+    nmpc_reversal_penalty_k: -1.0
+    nmpc_rrate_stage_ramp_enabled: false
+    nmpc_rrate_stage_near: 0.15
+    nmpc_rrate_zone_enabled: false
+    nmpc_rrate_zone_boost_straight: 2.0
+    nmpc_rrate_zone_ease_approach: 0.35
+    nmpc_rrate_zone_floor_corner: 0.15
+    nmpc_rjerk_delta: 0.0
+    nmpc_rjerk_a: 0.0
+    nmpc_corner_rrate_blend_enabled: false
+    nmpc_corner_factor_k: -1.0
+    nmpc_rrate_steer_straight: -1.0
+    nmpc_rrate_steer_corner: -1.0
+
+    # --- NMPCParams: solver/structural params ---
+    use_nmpc: true               # this node always runs the NMPC; set true for field parity, see comment above
+    nmpc_horizon: 20
+    nmpc_sqp_iters: 1
+    nmpc_solve_budget_ms: 25.0   # GAP E2 -- measured on a desktop, not yet on target Jetson hardware
+    nmpc_rk_substeps: 2
+    nmpc_jac_substeps: 1
+    nmpc_trust_delta_rad: 0.15707963267948966
+    nmpc_trust_a: 0.6
+    nmpc_backtrack_max: 2
+    nmpc_track_halfwidth: 3.5
+    nmpc_slack_weight: 10000.0
+    nmpc_curvature_dense_step: 0.5
+    nmpc_curvature_smooth_w: 3
+    nmpc_kappa_clip: 0.5
+    # GAP D2: OVERRIDDEN from the sim-tree default (true). Models an FSDS simulator
+    # artifact (a sustained ~7.5 m/s^2 lateral-accel clamp), not real vehicle physics --
+    # must stay false for any real-vehicle use.
+    nmpc_alat_ceiling_enabled: false
+    nmpc_spline_reference_enabled: true
+    nmpc_horizon_speed_profile_enabled: false   # sim-tree finding: live-rejected, do not enable -- see mpc_params.py
+    nmpc_friction_circle_enabled: false         # sim-tree finding: no slack var, goes infeasible -- do not enable
+    nmpc_speed_limit_enabled: false
+    nmpc_speed_limit_margin: 0.5
+    nmpc_speed_limit_slack_weight: 200.0
+    nmpc_osqp_max_iter: 500
+    nmpc_osqp_eps: 0.0001
+
+# --- planning/fsae_planning (three planners; node name == executable name) ---
+# 'plot' enables matplotlib output - set false on the car (headless).
+fasttube:
+  ros__parameters:
+    look_forward: 6
+    plot: false
+    invert_cones: false
+fasttube_without_kalman:        # SLAM fallback - reads raw camera detections
+  ros__parameters:
+    look_forward: 4
+    plot: false
+centerline_planner:
+  ros__parameters:
+    look_forward: 4
+    smoothing_factor: 1.0
+    plot: false
+
+# --- control/fsae_can_bridge ---
+# Keys are node names: ack_to_can's node is 'ackermann_to_can'.
+ackermann_to_can:
+  ros__parameters:
+    can_id: 768                 # command frame id = 0x300. Old launches ALL passed
+                                # default_value='0x300' (the node default of 300 was always
+                                # overridden), so the car listens on 768. Refactor had baked in
+                                # the unused node default (300) - restored to 768 to match.
+can_decoder:
+  ros__parameters:
+    battery_main_id: 0x6b0      # current/voltage
+    battery_cells_id: 0x6b3     # cell count
+    battery_temp_id: 0x6b4      # temperature
+    drive_speed_id: 0x604
+    drive_steer_id: 0x605
+    glv_id: 0x602
+    battery_msg_count: 4        # frames collected before publishing battery state
+    drive_msg_count: 3          # frames collected before publishing drive state
+candapter_node:               # CAN hardware bridge (ported from CanTalk). Jetson-only.
+  ros__parameters:
+    port: "/dev/ttyUSB0"        # CANdapter USB-serial device
+    baud_rate: 250              # CAN bitrate in kbit/s (-> 'S5'); NOT the USB serial line speed
+autonomous_sys_status:
+  ros__parameters: {}           # no tunables yet
+# Gamepad teleop (minimal): steer, throttle, brake, L1 e-stop. Reads the stock `joy` node's
+# /joy topic, so it is controller-agnostic - an Xbox pad and a PS4 pad differ only in the
+# axis/button INDICES below. To retarget a pad, run `ros2 topic echo /joy`, move one control
+# at a time, and write the indices you see. Publishes cmd_vel (CAN/MoTeC, the live path);
+# actuator_cmd (serial/Arduino) is DISABLED by default, see actuator_cmd_enabled below.
+joystick_teleop:
+  ros__parameters:
+    max_speed: 2.0              # m/s (cmd_vel path). ack_to_can int()-truncates speed,
+                                # so values below 1.0 send 0 over CAN.
+    max_angle: 180.0            # degrees; NB ack_to_can (CAN path only) still rejects frames beyond +/-30
+    max_throttle_percent: 50.0  # actuator_cmd path (DISABLED) - full trigger travel = 50% throttle
+    max_brake_percent: 100.0
+    max_steer_rate: 0.0          # deg/s steering slew limit; 0 = off (raw stick). Caps how fast
+                                # the commanded angle can move. Try ~90 to feel it, tune to taste.
+    # DISABLED: publishes /fsae/control/actuator_cmd for fsae_serial_bridge (Arduino bench
+    # rig). We're back on MoTeC/CAN (cmd_vel above), so this stays off. Left wired rather
+    # than deleted in case the bench rig comes back.
+    actuator_cmd_enabled: false
+    # --- controller map ---
+    # VERIFIED on a PS4 (Sony Wireless Controller) via `ros2 topic echo /joy`, 2026-07-25.
+    # NB the PS4 trigger axes are 3/4, NOT the Xbox 2/5 - retarget with /joy on a new pad.
+    axis_steer: 0               # left stick X  (PS4 L3-X; +1.0 = full LEFT, matches ROS sign)
+    axis_throttle: 4            # right trigger (PS4 R2; rest +1.0 -> full -1.0)
+    axis_brake: 3               # left trigger  (PS4 L2; rest +1.0 -> full -1.0)
+    button_estop: 4             # shoulder      (PS4 L1), HELD = all outputs 0. -1 disables.
+    # --- axis conditioning ---
+    invert_steer: false         # +ve steering_angle = LEFT (ROS convention)
+    steer_deadzone: 0.05        # ignore stick centre drift
+    trigger_rest: 1.0           # axis value with the trigger released (verify on a new pad)
+    trigger_full: -1.0          # axis value with the trigger pressed flat
+    # --- timing ---
+    publish_rate: 50.0          # Hz; commands go out on a timer, not per Joy callback
+    joy_timeout: 0.25           # s of /joy silence before outputs go to 0 (pad dropout)
+
+# --- control/fsae_serial_bridge (bench-rig hub Arduino) --- DISABLED / not launched ---
+# We're back on MoTeC (CAN path, candapter_node), so this bridge and everything upstream
+# that feeds it (fixed_throttle_percent/actuator_cmd_enabled above, joystick_teleop's
+# actuator_cmd_enabled) are switched off. Left in place, not deleted, in case the Arduino
+# bench rig comes back.
+serial_bridge:
+  ros__parameters:
+    # Hub Arduino is a CH340-based clone -> enumerates as /dev/ttyUSB*, NOT /dev/ttyACM*
+    # (ACM is only for native-USB boards: Leonardo/Micro/genuine Uno R3+). Using the stable
+    # by-id symlink so it does not depend on ttyUSB enumeration order (candapter_node also
+    # claims /dev/ttyUSB0 - the two are mutually exclusive at runtime, but this disambiguates).
+    port: "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"
+    baud_rate: 115200           # USB serial line speed; matches the Arduino sketches
+
+# --- perception/fsae_camera (ZED cone detection; node name 'cone_detection_node') ---
+cone_detection_node:
+  ros__parameters:
+    # Path to the TensorRT engine on the Jetson. NOT committed (GPU-specific) - set to the
+    # real location. Was hardcoded "cone_detection_model.engine" in zed_launch.hpp.
+    engine_path: "/home/fsae/ros2_ws/cone_detection_model.engine"
+    conf_threshold: 0.4           # YOLO confidence gate (tune 0.55-0.65 on car)
+    max_cone_distance: 25.0        # metres; drop cones farther than this
+    visualise: true                # publish annotated debug image
+    # Ground-plane fit (RANSAC) — reconstructs the SDK's dropped is_grounded floor anchoring.
+    # Each cone is positioned by intersecting its base ray with the fitted plane; a weak fit
+    # falls back to per-cone median depth. Watch the throttled "ground plane: height=.. tilt=.."
+    # log on the car: height should ≈ the camera mounting height and tilt should be small.
+    ground_fit_enable: true        # false = always use per-cone box-centre depth (old behaviour)
+    ground_ransac_iters: 120       # RANSAC trials per frame (more = steadier fit, more CPU)
+    ground_inlier_thresh: 0.05     # m; point-to-plane distance to count as an inlier
+    ground_min_inliers: 600        # below this the fit is 'weak' → fall back to per-cone depth
+    ground_subsample_step: 8       # px stride when building the cloud (larger = cheaper, coarser)
+    ground_max_tilt_deg: 20.0      # gravity prior: reject planes tilted more than this from level
+    ground_contact_offset_px: 1    # moves the base contact pixel DOWN this many depth-image px before the
+                                   # ground-plane ray hit. Basically the depth of the cone at the base was wrong
+                                   # but the depth of the ground one pixel in front of the cone is accurate so
+                                   # we instead use that pixel to get the correct depth. This is a bit jank
+                                   # but until either the yolo is retrained or the zed is recalibrated this is
+                                   # GOOD ENOUGH. for 720p shift 1px for 1080 shift 2px
+
+    # --- DEBUG params (console diagnostics; all prefixed debug_, keep false for normal runs) ---
+    debug_depth_grid: false        # print an ASCII grid of raw depth-image values over each cone's box every
+                                   # frame (metres, downsampled). Floods the console at frame rate — tuning only.
+    debug_ground_plane_log: false  # print the throttled "ground plane: height/tilt/inliers" INFO line.
+                                   # (The weak-fit WARN is separate and always shown, even when this is false.)
+    # Wrapper topic names - CONFIRMED against the wrapper's startup log on the Jetson
+    # (2026-07-02). NOTE: this zed-ros2-wrapper version does NOT publish left/image_rect_color
+    # by default ('Publish Left/Right images: FALSE') - the rectified colour stream is the
+    # rgb/ alias below (BGRA 32-bit, from the left sensor).
+    image_topic: "/zed/zed_node/rgb/color/rect/image"
+    depth_topic: "/zed/zed_node/depth/depth_registered"
+    camera_info_topic: "/zed/zed_node/rgb/color/rect/camera_info"
+    pose_topic: "/zed/zed_node/pose"
+
+# --- perception: zed_ros2_wrapper SDK overrides (the wrapper's own node) ---
+# Passed to the wrapper via its `ros_params_override_path` launch arg (see
+# perception.launch.py); the wrapper appends it LAST, so these keys win over its
+# own common_stereo.yaml / zed2i.yaml defaults. Keyed to the wrapper node's FQN
+# ('/zed/zed_node') NOT '/**' on purpose: this is the central config file, so a
+# wildcard would leak camera params onto every other node that loads it.
+#
+# Why NEURAL: the pre-wrapper node drove the SDK with sl::DEPTH_MODE::ULTRA, a
+# deprecated 5.x alias that warns and silently runs NEURAL. Requesting NEURAL is
+# the faithful port; otherwise the wrapper defaults to NEURAL_LIGHT on Jetson.
+"/zed/zed_node":
+  ros__parameters:
+    general:
+      # HD1080 caps at 30 fps on the ZED 2i (HD720 was 60). 1080p ~doubles the
+      # depth-map pixels vs 720p (better far-range density) at ~2x NEURAL compute.
+      # Verify the Jetson sustains 30 Hz: ros2 topic hz /zed/zed_node/depth/depth_registered
+      grab_resolution: 'HD720'   # 'HD2K' | 'HD1080' | 'HD720' | 'VGA' | 'AUTO'
+      grab_frame_rate: 30         # HD1080 max on ZED 2i is 30
+    depth:
+      depth_mode: 'NEURAL'        # 'NONE'|'NEURAL_LIGHT'|'NEURAL'|'NEURAL_PLUS' (PLUS not installed)
+      # NEURAL is rated to 35 m on the ZED 2i (standard 20 m), so 25 m is in spec.
+      # cone_detection_node.max_cone_distance is 25 m but was capped here at 15 m —
+      # cones past 15 m came back NaN and were dropped. ~<7% error at 25 m NEURAL.
+      max_depth: 25.0             # was 15.0
+      # Range [1,100]; LOWER rejects more low-confidence depth (100 keeps every px).
+      # 80 trims marginal/edge depth feeding the ground-plane fit + median fallback,
+      # so per-frame distance jitters less. Trade-off: sparser far/low-texture cones
+      # (they need >=3 valid samples). Tune 70-90.
+      depth_confidence: 80        # SDK default is 95
+      # Temporal depth filter, range [0,100]; -1 = SDK default (30), 0 = off. Higher
+      # smooths depth across frames to cut per-frame jitter (helps the ground-plane
+      # fit + median fallback). Trade-off: lag on fast-changing scenes; >0 also
+      # force-enables the wrapper's positional tracking.
+      depth_stabilization: 30
+      # cone_detection_node deprojects the depth IMAGE and never subscribes to the
+      # point cloud; nothing else in the repo consumes it. Off to save CPU/bandwidth.
+      publish_point_cloud: false
+    # TF ownership (REP-105). The wrapper IS the odometry source, so it owns
+    # odom -> base_link (publish_tf). map -> odom belongs to the SLAM node and must have
+    # exactly one publisher, hence publish_map_tf: false - TF cannot merge two
+    # publishers on one edge, it keeps both and returns whichever stamp is nearest.
+    #
+    # area_memory off on purpose: with it on, the SDK runs its own loop closure and
+    # /zed/zed_node/pose JUMPS when it relocalises. SLAM wants the opposite - pure
+    # drifting visual odometry on /zed/zed_node/odom - because correcting that drift
+    # against the cone map is its whole job, and a back-end cannot reason about a prior
+    # that silently teleports. Consume /odom, never /pose.
+    pos_tracking:
+      pos_tracking_enabled: true
+      publish_tf: true
+      publish_map_tf: false
+      area_memory: false
+
+# --- perception/fsae_slam (cone_mapper - Python KF landmark mapper) ---
+cone_mapper:
+  ros__parameters:
+    default_error_in_estimate: 4.0   # initial KF estimate error
+    error_in_measurement: 2.5        # KF measurement error
+    match_radius: 1.0                # m, nearest-landmark match radius
+    remove_point_counter: 200        # frames between low-confidence prunes
+    times_modified_limit: 100        # min confidence to survive a prune
+    modify_rate: 1.08                # confidence growth per match
+    reset_count: 60                  # frames between full map resets
+    invert_cones: false              # swap blue<->yellow track assignment
+
+# --- planning/fsae_mission_control (ported from scrutineering) ---
+inspection_mission_node:
+  ros__parameters:
+    timeout: 10                 # s
+    max_steering_angle: 45.0    # degrees
+    steering_angle_velocity: 36.0  # degrees/s
+    max_speed: 5.0              # m/s
+    max_acceleration: 5.0       # m/s^2
+    jerk: 1.0                   # m/s^3
+
+# --- bench testing (mock stimulus, from mock_params.yaml) ---
+mock_stimulus:
+  ros__parameters:
+    accel: 0.0
+    angle: 10.0
+    angular_vel: 0.0
+    vel: 11.0
+    verbose: false
+    use_sim_time: false

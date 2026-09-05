@@ -1,0 +1,25 @@
+# Pip-only Python dependencies for the FSAE autonomous stack.
+# These are NOT resolvable via rosdep, so install them manually (or in the Dockerfile):
+#   pip install -r requirements.txt
+#
+# Standard scientific deps (numpy, scipy, shapely, matplotlib) are declared in each
+# package.xml and come via rosdep - they are intentionally NOT duplicated here.
+
+# Numpy 2.x is required by pyzed 5.3 (camera node). System apt matplotlib/scipy on
+# Jetson Ubuntu 22.04 were built against numpy 1.x and crash with _ARRAY_API on numpy 2,
+# so we install numpy-2-compatible wheels of matplotlib + scipy via pip and let Python's
+# import path shadow the apt versions. See BUG_FIXES.md "numpy 2 migration".
+matplotlib>=3.8
+scipy>=1.11
+
+# fsd-path-planning is NOT on PyPI - install from GitHub (FaSTTUBe). Needs Python >=3.9.
+git+https://github.com/papalotis/ft-fsd-path-planning.git   # planning/fsae_planning - fasttube & fasttube_without_kalman planners
+kdtree                 # perception/fsae_slam   - cone_mapper landmark KD-tree
+pyPS4Controller        # control/fsae_can_bridge - joystick_teleop
+spidev                 # control/fsae_can_bridge - MCP2515 CAN driver (Jetson SPI)
+pyserial               # control/fsae_can_bridge - CANdapter USB-serial bridge (candapter_node); also rosdep 'python3-serial'
+
+# osqp is pip-only (no rosdep key) - needed by the NMPC controller's condensed
+# QP solve (control/fsae_control/fsae_control/mpc/nmpc_core.py). The default
+# Stanley controller has no such dependency. See NMPC_INTEGRATION_GAPS.md (E1).
+osqp>=0.6
