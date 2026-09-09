@@ -214,12 +214,23 @@ ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
 | `s_curve` | Straight → arc → short straight → opposite-sign arc → straight | Uses the same `turn_radius_m`/`turn_arc_deg` for both bends |
 
 `randomize_start` (default off) is an **independent axis**, combinable with
-any scenario above — it offsets the car's initial `(y, yaw)` from the path's
+any scenario above — it offsets the mocked car's `(y, yaw)` from the path's
 own start pose by a bounded random amount (`randomize_start_max_lateral_m`,
-default 1.0 m; `randomize_start_max_heading_deg`, default 15°), so you can
-bench-test convergence from an initial tracking error instead of starting
-exactly on the path. `randomize_start_seed` (default 0) makes the sampled
-offset reproducible — same seed, same offset, every run.
+default 1.0 m; `randomize_start_max_heading_deg`, default 15°), so the NMPC
+is exercised against a nonzero `e_y`/`e_psi` from tick one instead of
+starting exactly on the path. `randomize_start_seed` (default 0) makes the
+sampled offset reproducible — same seed, same offset, every run.
+
+**This does NOT converge visually.** The offset is applied to every tick of
+the mocked pose's scripted trajectory, permanently — remember, this whole
+rig is open-loop (see the callout at the end of this section): nothing
+consumes the NMPC's `/fsae/control/cmd_vel` output to move the mocked car,
+so a large steering command in response to the offset is the rig **working
+correctly**, not the car "failing to correct." Watch `ros2 topic echo
+/fsae/control/cmd_vel` or the stat panel in the telemetry GUI (below) for a
+steering command with the right sign and a sensible magnitude for the
+sampled offset — that is the actual pass/fail signal here, not whether the
+car visibly drives back onto the path in RViz.
 
 `sweep_on_curve` controls what the car's pose does *in addition to* the
 scenario's path shape: on `scenario=straight` it defaults **on** (the
@@ -251,6 +262,14 @@ ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
 RViz needs no changes for any of these — the camera's `Target Frame` is
 already `base_link` (see "The camera follows the car" above), which tracks
 the live car pose regardless of path shape.
+
+A curved scenario's total path length is much shorter than `straight`'s
+100 m default (e.g. the `s_curve` example above is ~63 m end to end, driven
+by `turn_radius_m`/`turn_arc_deg` and the fixed 20/15/20 m lead-in/mid/
+lead-out segments in `bench_scenarios.py`). Once the mocked car's along-path
+position reaches the end, it freezes at the last waypoint rather than
+erroring — not a crash, just a dead-looking demo. Lower `forward_speed_mps`
+or increase `turn_arc_deg`/the lead-in lengths if you want a longer run.
 
 ### Live telemetry GUI
 
