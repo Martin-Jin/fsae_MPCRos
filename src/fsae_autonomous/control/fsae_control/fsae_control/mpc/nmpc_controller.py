@@ -1,12 +1,5 @@
 """
-NMPC path-tracking controller node (fsae_autonomous production port).
-
-Adapted from the sim tree's fsae_planning/control/fsae_control/fsae_control/
-mpc/mpc_controller.py. This node is NMPC-only (no use_nmpc branch, no LTV-QP
-mpc_core.MPCController -- this repo does not carry that module, see
-control_limits.py's docstring) and cmd_vel-only (no fs_msgs/ControlCommand
-standalone mode, no GO-gating -- both are FSDS-simulator-specific and this
-repo has no dependency on fs_msgs at all).
+NMPC path-tracking controller node
 
 Selected by the `controller:=nmpc` launch arg in control.launch.py; the
 default remains `controller:=stanley` (stanley_controller.py), so launching
@@ -37,6 +30,12 @@ does not re-explain each gap.
                                                                              NMPC's raw signed a_cmd (m/s^2) in
                                                                              .drive.acceleration; nothing
                                                                              consumes this yet
+    out  /fsae/viz/nmpc_prediction_raw       geometry_msgs/PoseArray        RViz visualisation only, gated by
+                                                                             NMPCParams.nmpc_publish_prediction_enabled
+                                                                             (default off); "map"-frame Cartesian
+                                                                             conversion of the predicted horizon,
+                                                                             republished as a MarkerArray by
+                                                                             fsae_visualization
 
 CONTROL LOOP PHASES (see _control_step)
 ----------------------------------------------------------------------------
@@ -249,6 +248,12 @@ class NMPCControllerNode(Node):
         # MoTeC channel / revised ack_to_can has something to read directly.
         self.pub_accel = self.create_publisher(
             AckermannDriveStamped, '/fsae/control/accel_cmd', 5)
+        # RViz visualisation only (default off, see NMPCParams.
+        # nmpc_publish_prediction_enabled): the NMPC's own predicted
+        # trajectory, converted to Cartesian, republished as a MarkerArray by
+        # fsae_visualization/visualise_trajectories.py.
+        self.pub_nmpc_prediction = self.create_publisher(
+            PoseArray, '/fsae/viz/nmpc_prediction_raw', 5)
 
         self._path: np.ndarray = (
             self._static_path if self._static_path is not None else np.empty((0, 2))
@@ -426,6 +431,19 @@ class NMPCControllerNode(Node):
         self._last_cmd_speed = 0.0
         self.get_logger().warn(f'NMPC safe-stop: {reason}', throttle_duration_sec=1.0)
 
+    def _publish_nmpc_prediction(self, xy: np.ndarray) -> None:
+        """RViz visualisation only — see pub_nmpc_prediction's own comment."""
+        msg = PoseArray()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'map'
+        for x, y in xy:
+            p = Pose()
+            p.position.x = float(x)
+            p.position.y = float(y)
+            p.orientation.w = 1.0
+            msg.poses.append(p)
+        self.pub_nmpc_prediction.publish(msg)
+
     # ------------------------------------------------------------------
     # Control step (fixed 20 Hz)
     # ------------------------------------------------------------------
@@ -517,6 +535,8 @@ class NMPCControllerNode(Node):
             delta_cmd = float(self._mpc.last_telemetry.get('delta_cmd', 0.0))
             a_cmd = float(self._mpc.last_telemetry.get('a_cmd', 0.0))
             solve_ok = math.isfinite(delta_cmd) and math.isfinite(a_cmd)
+            if self._mpc.last_prediction_xy is not None:
+                self._publish_nmpc_prediction(self._mpc.last_prediction_xy)
         except Exception as exc:   # noqa: BLE001 — any solver failure must fail safe, not crash the node
             self.get_logger().error(f'NMPC compute() raised: {exc}', throttle_duration_sec=1.0)
             delta_cmd, a_cmd, solve_ok = 0.0, 0.0, False

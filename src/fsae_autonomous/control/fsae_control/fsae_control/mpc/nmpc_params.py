@@ -308,6 +308,15 @@ class NMPCParams:
                 "answer, so sub-1e-4 accuracy buys nothing and costs iterations",
         "controller": "nmpc_only",
     })
+    nmpc_publish_prediction_enabled: bool = field(default=False, metadata={
+        "unit": "bool",
+        "desc": "true -> convert the predicted horizon X to Cartesian (x,y) "
+                "each tick and stash it on NMPCController.last_prediction_xy "
+                "for the node to publish (RViz visualisation). Default false: "
+                "skips the conversion entirely (visualisation-only, no effect "
+                "on the solve) so there is no per-tick cost unless opted in.",
+        "controller": "nmpc_only",
+    })
 
 
 DEFAULT_NMPC_PARAMS = NMPCParams()

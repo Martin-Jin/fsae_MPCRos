@@ -84,6 +84,27 @@ work is **superseded by this NMPC port**, not merged with it:
   topic, a degraded estimate, or an explicit "not done yet"), and what
   closing each gap properly would take. **Read this before running the
   NMPC controller on the car.**
+- **RViz visualization of the NMPC's predicted trajectory** (default off,
+  `nmpc_publish_prediction_enabled`): `nmpc_core.py`'s `PathReference.xy_at()`
+  converts the predicted horizon back to Cartesian; `nmpc_controller.py`
+  publishes it as a `PoseArray` on `/fsae/viz/nmpc_prediction_raw` (`map`
+  frame); `visualization/fsae_visualization/.../visualise_trajectories.py`
+  republishes it as an orange `LINE_STRIP` `MarkerArray` on
+  `/fsae/viz/nmpc_prediction`, alongside the pre-existing
+  `/fsae/viz/centerline` (the planner's own path). Zero added cost when
+  disabled (the default).
+- **A hardware-free bench rig**
+  (`control/fsae_control/fsae_control/mpc/mock_pose_path_publisher.py` +
+  `common/fsae_bringup/launch/nmpc_bench.launch.py`): publishes a fixed
+  straight reference path plus a car pose whose lateral offset sweeps back
+  and forth, so `nmpc_controller`'s actual command response can be watched
+  live with no car/camera/CAN/perception/planning/SLAM running at all —
+  `ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true`. See that
+  file's own module docstring for the exact math and why yaw is held fixed
+  at the path tangent. Not a closed-loop plant simulation (the mocked pose
+  doesn't react to the commanded output) and not a replacement for
+  `test_nmpc_signs_magnitudes.py`'s automated sign/magnitude checks — a
+  live, human-in-the-loop counterpart to them.
 
 ## How to use it
 
@@ -125,11 +146,19 @@ ros2 launch fsae_bringup control.launch.py controller:=nmpc
 (`controller:=stanley`, the default, is unchanged from before this port.)
 
 ### Running the tests
-No test suite exists yet for the NMPC port in this repo (the old
-`test_mpc_controller.py` tested the now-removed LTV-QP `MPCController` and
-no longer applies — see "Status" above). The sim repo's own
-`nmpc_offline_check.py` (numerical self-consistency checks on the solver
-itself) has not yet been ported here.
+`control/fsae_control/test/test_nmpc_core_math.py` (solver self-consistency:
+model parity, Jacobians, SQP convergence, the `xy_at()`/`project()` Frenet
+round trip) and `test_nmpc_signs_magnitudes.py` (behavioral sign/magnitude
+checks) cover the NMPC port; the old `test_mpc_controller.py` tested the
+now-removed LTV-QP `MPCController` and no longer applies (see "Status"
+above).
+
+```bash
+colcon build --packages-select fsae_control
+source install/setup.bash
+colcon test --packages-select fsae_control --pytest-args -v
+colcon test-result --verbose
+```
 
 ## A couple of things worth knowing
 

@@ -412,6 +412,23 @@ class PathReference:
         e_psi = float(_wrap(car_yaw - path_yaw))
         return s0, float(e_y), e_psi, base_idx, path_yaw
 
+    def xy_at(self, s, e_y=0.0):
+        """
+        Inverse of project(): Frenet (s, e_y) -> Cartesian (x, y) in
+        self.path's own frame. Exactly inverts project()'s
+        e_y = dy*cos(psi) - dx*sin(psi) arithmetic (same raw self.arc/
+        self.path anchors, not a freshly-fit spline), so a round trip
+        (xy_at(*project(pt, yaw)[:2])) recovers pt. Vectorised over
+        array-like s/e_y like kappa_at, so a whole horizon converts in one
+        call.
+        """
+        x0 = np.interp(s, self.arc, self.path[:, 0])
+        y0 = np.interp(s, self.arc, self.path[:, 1])
+        psi = self.psi_ref_at(s)
+        x = x0 - e_y * np.sin(psi)
+        y = y0 + e_y * np.cos(psi)
+        return x, y
+
 
 @dataclass
 class _Plant:
@@ -1080,6 +1097,10 @@ class NMPCController:
         self._heading_profile_warned = False
 
         self.last_telemetry: dict = {}
+        # (N+1, 2) Cartesian predicted trajectory, only populated when
+        # nmpc_publish_prediction_enabled is set (RViz visualisation) --
+        # see compute()'s own gated assignment near its return.
+        self.last_prediction_xy: np.ndarray | None = None
         self._qp = None
         self._build_qp()
 
@@ -1955,6 +1976,15 @@ class NMPCController:
             v_max_final = ref.v_ref_at(X[1:, IDX_S]) + self.speed_limit_margin
             self.last_telemetry['nmpc_speed_limit_over_max'] = float(
                 np.maximum(X[1:, IDX_VX] - v_max_final, 0.0).max())
+
+        # RViz visualisation only, default off (see NMPCParams field docstring)
+        # so there is zero added cost -- not even the np.interp calls below --
+        # unless a caller has explicitly opted in.
+        if self.nmpc.nmpc_publish_prediction_enabled:
+            xs, ys = ref.xy_at(X[:, IDX_S], X[:, IDX_EY])
+            self.last_prediction_xy = np.column_stack([xs, ys])
+        else:
+            self.last_prediction_xy = None
         return steering, throttle, brake
 
     def _path_reference(self, path) -> PathReference | None:

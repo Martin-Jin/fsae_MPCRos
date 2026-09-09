@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'controller = fsae_control.stanley_controller:main',
             'nmpc_controller = fsae_control.mpc.nmpc_controller:main',
+            'mock_pose_path_publisher = fsae_control.mpc.mock_pose_path_publisher:main',
         ],
     },
 )

@@ -18,6 +18,11 @@ This file checks that the solver's internal MATH is not silently wrong:
        perturbation or a non-smooth term.
     3. SQP CONVERGENCE — cost must decrease monotonically to a plateau from
        a cold start, at several representative operating points.
+    4. FRENET ROUND-TRIP — PathReference.xy_at() (used only to convert the
+       predicted horizon to Cartesian for RViz visualisation) must exactly
+       invert project() (used every tick to measure e_y/e_psi); a mismatch
+       would mean the visualised prediction doesn't describe the same
+       geometry the solver actually predicted against.
 
 Ported from the sim tree's fsae_planning/control/fsae_control/test/
 nmpc_offline_check.py (checks 1-3 of 6). Checks 4-6 of that file are NOT
@@ -138,6 +143,50 @@ def test_kappa_scalar_matches_kappa_at():
         s = rng.uniform(0, ref.total)
         worst_k = max(worst_k, abs(ref.kappa_scalar(s) - float(ref.kappa_at(np.array([s]))[0])))
     assert worst_k < 1e-12, f'kappa_scalar/kappa_at diverged by {worst_k:.2e}'
+
+
+# ---------------------------------------------------------------------------
+# 4. Frenet round-trip: xy_at() must exactly invert project()
+# ---------------------------------------------------------------------------
+
+def test_xy_at_inverts_project():
+    """
+    xy_at()'s round trip is only exact to first order in curvature*e_y:
+    project() anchors on the NEAREST RAW WAYPOINT then applies a linear
+    along/perp correction (a locally straight approximation), and xy_at()
+    inverts exactly that approximation, not the path's true curved
+    geometry. At a realistic tracking offset (a few cm, this controller's
+    actual operating regime, not the +-3.5 m soft track bound) the two
+    agree to sub-mm; deliberately checked at only that scale, since a
+    large synthetic e_y (metres, on this file's 13 m-radius corner) makes
+    the expected error ~0.5*kappa*e_y^2 by construction, not a bug.
+    """
+    ref = nc.PathReference(synthetic_corner())
+    rng = np.random.default_rng(3)
+    worst = 0.0
+    for _ in range(200):
+        s_probe = rng.uniform(0, ref.total)
+        x0, y0 = ref.xy_at(np.array([s_probe]))
+        psi = ref.psi_ref_at(s_probe)
+        e_y_true = rng.uniform(-0.05, 0.05)
+        pt = np.array([float(x0[0]) - e_y_true * math.sin(psi),
+                       float(y0[0]) + e_y_true * math.cos(psi)])
+        yaw = psi + rng.uniform(-0.3, 0.3)
+        s0, e_y, e_psi, _base_idx, _path_yaw = ref.project(pt, yaw)
+        x2, y2 = ref.xy_at(s0, e_y)
+        err = math.hypot(float(x2) - pt[0], float(y2) - pt[1])
+        worst = max(worst, err)
+    assert worst < 3e-3, f'xy_at(project(pt)) failed to recover pt, worst error {worst:.2e} m'
+
+    # Same check, vectorised (the shape compute() actually uses for the
+    # whole predicted horizon in one call).
+    ss = np.array([rng.uniform(0, ref.total) for _ in range(20)])
+    eys = rng.uniform(-1.5, 1.5, size=20)
+    xs, ys = ref.xy_at(ss, eys)
+    for i in range(20):
+        xi, yi = ref.xy_at(ss[i], eys[i])
+        assert abs(xi - xs[i]) < 1e-12 and abs(yi - ys[i]) < 1e-12, (
+            'vectorised xy_at diverged from scalar-per-point calls')
 
 
 # ---------------------------------------------------------------------------
