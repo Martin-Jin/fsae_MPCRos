@@ -205,8 +205,11 @@ class pub_viz(Node):
         marker.type = Marker.CUBE
         marker.action = Marker.ADD
         marker.pose = pose
-        marker.scale = Vector3(x=0.3,y=0.3,z=0.3)
-        marker.color = ColorRGBA(r=1.0,g=0.0,b=0.0,a=1.0)
+        # White, small -- distinct from the car model's own blue/green
+        # material and the orange prediction line, so the path doesn't
+        # visually blend with either.
+        marker.scale = Vector3(x=0.15, y=0.15, z=0.15)
+        marker.color = ColorRGBA(r=1.0, g=1.0, b=1.0, a=1.0)
         marker.lifetime.sec = 0
 
         return marker
@@ -230,11 +233,11 @@ class pub_viz(Node):
         marker.pose.orientation.z = 0.0
         marker.pose.orientation.w = 1.0
 
-        marker.scale = Vector3(x=0.3, y=0.3, z=0.3)
+        marker.scale = Vector3(x=0.15, y=0.15, z=0.15)
 
         marker.color.r = 1.0
-        marker.color.g = 0.0
-        marker.color.b = 0.0
+        marker.color.g = 1.0
+        marker.color.b = 1.0
         marker.color.a = 1.0  # Alpha (opacity)
 
         marker.lifetime.sec = 0

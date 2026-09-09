@@ -130,6 +130,27 @@ actually intends to do about it, side by side, updating live at 20 Hz.
 
 ## Bench-testing with no car (one command, RViz included)
 
+> **The mental model for this whole rig, stated plainly: the car is forced
+> to traverse a pre-scripted path no matter what the controller commands.**
+> `mock_pose_path_publisher.py` computes the mocked car's pose from elapsed
+> time alone, every tick, from scratch — nothing about `nmpc_controller`'s
+> output (`/fsae/control/cmd_vel`) ever feeds back into it. So:
+> - **The predicted-trajectory line, the steering arrow, and the telemetry
+>   GUI exist to show that the controller COMPUTES the right response** —
+>   correct sign, correct magnitude, reacting sensibly to whatever
+>   `e_y`/`e_psi`/curvature it's fed — not to show the car being steered.
+> - **The rendered car body in RViz never visibly "corrects" or converges**,
+>   on any scenario, with or without `randomize_start`. If `randomize_start`
+>   applied an offset, that offset stays applied to every tick for the whole
+>   run — the car doesn't drift back onto the path, because nothing is
+>   driving it there.
+> - This validates only "does the controller react correctly to a given
+>   instantaneous state," never "does the car actually converge over time."
+>   Answering that second question needs a real closed-loop plant model
+>   (something that integrates `/fsae/control/cmd_vel` into the next tick's
+>   pose), which this rig deliberately does not have — see the closing note
+>   at the end of this section for the exact scope boundary.
+
 `mock_pose_path_publisher.py` publishes a fixed straight reference path plus
 a car pose whose lateral offset sweeps back and forth (a sine wave
 perpendicular to the path, yaw held fixed at the path's own heading so the
