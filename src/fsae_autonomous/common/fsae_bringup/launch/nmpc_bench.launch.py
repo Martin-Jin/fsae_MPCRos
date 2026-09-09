@@ -2,7 +2,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -10,19 +10,30 @@ from launch_ros.actions import Node
 
 
 # NMPC bench test: mock_pose_path_publisher (synthetic e_y sweep, see its own
-# module docstring) + control.launch.py pinned to controller:=nmpc [+ viz].
-# No car / camera / CAN / perception / planning / SLAM — deliberately does
-# NOT include perception.launch.py / slam.launch.py / planning.launch.py /
-# can.launch.py, that absence is the entire point. Watch /fsae/control/cmd_vel
-# react live to a swept lateral offset. NOT a closed-loop plant simulation —
-# see mock_pose_path_publisher.py.
+# module docstring) + control.launch.py pinned to controller:=nmpc [+ viz +
+# rviz2 itself, pre-configured to show the planner path and the NMPC's
+# predicted trajectory]. No car / camera / CAN / perception / planning /
+# SLAM — deliberately does NOT include perception.launch.py /
+# slam.launch.py / planning.launch.py / can.launch.py, that absence is the
+# entire point. Watch /fsae/control/cmd_vel react live to a swept lateral
+# offset. NOT a closed-loop plant simulation — see mock_pose_path_publisher.py.
+#
+# One command gets the whole bench running, no separate terminals needed:
+#   ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true
 def generate_launch_description():
     launch_dir = os.path.join(get_package_share_directory('fsae_bringup'), 'launch')
     config = os.path.join(get_package_share_directory('fsae_bringup'), 'config', 'fsae_params.yaml')
+    rviz_config = os.path.join(
+        get_package_share_directory('fsae_control'), 'mpc', 'nmpc_bench.rviz')
     use_viz = LaunchConfiguration('use_viz')
 
     return LaunchDescription([
         DeclareLaunchArgument('use_viz', default_value='false'),
+        # Default true: use_viz's whole point is watching the predicted
+        # trajectory, so opting into viz opts into publishing it too. Still
+        # independently overridable (e.g. use_viz:=true
+        # nmpc_publish_prediction_enabled:=false to watch cmd_vel only).
+        DeclareLaunchArgument('nmpc_publish_prediction_enabled', default_value=use_viz),
         DeclareLaunchArgument('amplitude_m', default_value='1.0'),
         DeclareLaunchArgument('period_s', default_value='8.0'),
         DeclareLaunchArgument('forward_speed_mps', default_value='3.0'),
@@ -31,7 +42,11 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'control.launch.py')),
-            launch_arguments={'controller': 'nmpc'}.items()),
+            launch_arguments={
+                'controller': 'nmpc',
+                'nmpc_publish_prediction_enabled':
+                    LaunchConfiguration('nmpc_publish_prediction_enabled'),
+            }.items()),
 
         Node(
             package='fsae_control',
@@ -50,4 +65,10 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'viz.launch.py')),
             condition=IfCondition(use_viz)),
+
+        ExecuteProcess(
+            cmd=['rviz2', '-d', rviz_config],
+            output='screen',
+            condition=IfCondition(use_viz),
+        ),
     ])

@@ -28,6 +28,7 @@ colcon workspace, kept isolated from the sim tree for exactly this reason.
 | `control_limits.py` | The handful of constants/helpers `nmpc_core.py` needs from the sim repo's LTV-QP module, lifted out so this repo doesn't need `cvxpy`/`clarabel`. |
 | `nmpc_controller.py` | **The ROS2 node.** Subscribes to the path/pose/sensor topics below, calls `nmpc_core.py` once per tick, publishes the command. This doc is about this file. |
 | `mock_pose_path_publisher.py` | Hardware-free bench stimulus — see "Bench-testing with no car" below. |
+| `nmpc_bench.rviz` | RViz config for the bench rig: Fixed Frame `map`, the centerline + predicted-trajectory `MarkerArray` displays pre-added. Loaded automatically by `nmpc_bench.launch.py use_viz:=true`. |
 
 ## How it fits into the pipeline
 
@@ -99,18 +100,18 @@ ros2 launch fsae_bringup control.launch.py controller:=nmpc path_map_path:=/path
 
 ## Visualizing the predicted trajectory in RViz
 
-Off by default (zero added per-tick cost when unset). From the
-`ros2_autonomous/` workspace root (built and sourced as above), turn it on
-with:
+The predicted-trajectory publish itself is gated by
+`nmpc_publish_prediction_enabled` (default off, zero added per-tick cost
+when unset). The easiest way to see it is the one-command bench rig below,
+which turns this on and opens RViz automatically. To see it against the
+**real** planner/SLAM instead of the bench rig's mock stimulus, turn it on
+directly and bring up the viz nodes + RViz yourself (there is no bundled
+RViz config for this path since it depends on whatever the rest of the
+stack is already running):
 
 ```bash
 ros2 launch fsae_bringup control.launch.py controller:=nmpc nmpc_publish_prediction_enabled:=true
-```
-
-Then, in a second terminal (`source install/setup.bash` again there too),
-start the visualization nodes and RViz:
-
-```bash
+# in a second terminal (source install/setup.bash again there too):
 ros2 launch fsae_bringup viz.launch.py
 rviz2
 ```
@@ -124,11 +125,7 @@ In RViz: set **Fixed Frame** to `map`, then **Add → By topic** and add a
 Watching both together shows the planned path and what the controller
 actually intends to do about it, side by side, updating live at 20 Hz.
 
-`viz.launch.py` only starts the marker-publishing nodes
-(`cone_map_viz`/`path_viz`/`pursuit_viz`/`base_tf`) — it does not open an
-RViz window itself; run `rviz2` separately as shown above.
-
-## Bench-testing with no car
+## Bench-testing with no car (one command, RViz included)
 
 `mock_pose_path_publisher.py` publishes a fixed straight reference path plus
 a car pose whose lateral offset sweeps back and forth (a sine wave
@@ -144,12 +141,28 @@ source install/setup.bash
 ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true
 ```
 
+That single command starts the mock publisher, `nmpc_controller`, the four
+`fsae_visualization` marker nodes, **and `rviz2` itself**, pre-loaded with
+`mpc/nmpc_bench.rviz` (Fixed Frame `map`, the `/fsae/viz/centerline` and
+`/fsae/viz/nmpc_prediction` `MarkerArray` displays already added) — no
+separate terminals or manual Display setup needed. `use_viz:=true` also
+defaults `nmpc_publish_prediction_enabled:=true` (independently overridable,
+e.g. `use_viz:=true nmpc_publish_prediction_enabled:=false` to watch
+`cmd_vel` only with no viz).
+
 Optional sweep overrides:
 
 ```bash
 ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
     amplitude_m:=2.0 period_s:=6.0 forward_speed_mps:=2.0
 ```
+
+If `rviz2` doesn't work under WSLg (a taskbar icon appears but no window
+ever renders), that's a WSLg/Windows-side compositor issue, not this launch
+file — try `wsl --shutdown` from a Windows terminal (not this one) and
+reopen, which resets the WSLg GUI stack. Everything else in this command
+(the controller, the swept stimulus, the published topics) runs
+independently of whether RViz's window actually renders.
 
 Watch the response directly:
 
