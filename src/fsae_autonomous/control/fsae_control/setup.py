@@ -29,6 +29,7 @@ setup(
             'controller = fsae_control.stanley_controller:main',
             'nmpc_controller = fsae_control.mpc.nmpc_controller:main',
             'mock_pose_path_publisher = fsae_control.mpc.mock_pose_path_publisher:main',
+            'nmpc_telemetry_gui = fsae_control.mpc.nmpc_telemetry_gui:main',
         ],
     },
 )

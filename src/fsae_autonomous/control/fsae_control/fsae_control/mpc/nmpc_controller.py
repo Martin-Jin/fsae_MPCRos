@@ -36,6 +36,11 @@ does not re-explain each gap.
                                                                              conversion of the predicted horizon,
                                                                              republished as a MarkerArray by
                                                                              fsae_visualization
+    out  /fsae/viz/nmpc_telemetry            std_msgs/String (JSON)        nmpc_telemetry_gui.py only, gated by
+                                                                             NMPCParams.nmpc_publish_telemetry_enabled
+                                                                             (default off); last_telemetry dict plus
+                                                                             vx_source/car_x/car_y/car_yaw, GAP F1
+                                                                             stopgap (no telemetry infra exists here)
 
 CONTROL LOOP PHASES (see _control_step)
 ----------------------------------------------------------------------------
@@ -56,6 +61,7 @@ CONTROL LOOP PHASES (see _control_step)
              own limit and max_steer_angle (GAP B4), finite/NaN-guard every
              field, and publish.
 """
+import json
 import math
 import time
 
@@ -68,6 +74,7 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from fsae_interfaces.msg import ConeDetection
 from geometry_msgs.msg import Pose, PoseArray
 from nav_msgs.msg import Odometry
+from std_msgs.msg import String
 
 from fsae_control.control_utils import (
     curvature_speed, dynamic_speed_cap, load_path_profile_csv,
@@ -254,6 +261,13 @@ class NMPCControllerNode(Node):
         # fsae_visualization/visualise_trajectories.py.
         self.pub_nmpc_prediction = self.create_publisher(
             PoseArray, '/fsae/viz/nmpc_prediction_raw', 5)
+        # GAP F1 stopgap (no telemetry infra exists in this repo): JSON-
+        # serialised NMPCController.last_telemetry for nmpc_telemetry_gui.py,
+        # gated off by default (NMPCParams.nmpc_publish_telemetry_enabled),
+        # same convention as pub_nmpc_prediction above.
+        self.pub_telemetry = self.create_publisher(
+            String, '/fsae/viz/nmpc_telemetry', 5)
+        self._nmpc_publish_telemetry_enabled = nmpc_params.nmpc_publish_telemetry_enabled
 
         self._path: np.ndarray = (
             self._static_path if self._static_path is not None else np.empty((0, 2))
@@ -444,6 +458,22 @@ class NMPCControllerNode(Node):
             msg.poses.append(p)
         self.pub_nmpc_prediction.publish(msg)
 
+    def _publish_telemetry(self, vx_source: str) -> None:
+        """GUI-consumption only (nmpc_telemetry_gui.py), gated by
+        NMPCParams.nmpc_publish_telemetry_enabled -- see pub_telemetry's own
+        comment. last_telemetry is already all-float; vx_source and the
+        car's own pose are added since the GUI needs them and they don't
+        belong inside NMPCController's own telemetry dict (control-node
+        state, not solver state)."""
+        tel = dict(self._mpc.last_telemetry)
+        tel['vx_source'] = vx_source
+        tel['car_x'] = float(self._car_pos[0])
+        tel['car_y'] = float(self._car_pos[1])
+        tel['car_yaw'] = float(self._car_yaw)
+        msg = String()
+        msg.data = json.dumps(tel)
+        self.pub_telemetry.publish(msg)
+
     # ------------------------------------------------------------------
     # Control step (fixed 20 Hz)
     # ------------------------------------------------------------------
@@ -552,6 +582,13 @@ class NMPCControllerNode(Node):
                 f'({self._consecutive_solve_fails} consecutive)'
             )
             return
+
+        # Telemetry publish is skipped on the safe-stop path above (return),
+        # not zeroed-and-published — nmpc_telemetry_gui.py's own staleness
+        # check covers the display side, and a frozen last-known reading is
+        # more useful than a screenful of zeros during a safe-stop.
+        if self._nmpc_publish_telemetry_enabled:
+            self._publish_telemetry(vx_source)
 
         # Output steering low-pass (matches stanley_controller.py's own EMA
         # convention). 1.0 disables.

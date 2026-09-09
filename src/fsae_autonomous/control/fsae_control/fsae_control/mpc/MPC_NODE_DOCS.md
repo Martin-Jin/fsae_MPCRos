@@ -28,7 +28,9 @@ colcon workspace, kept isolated from the sim tree for exactly this reason.
 | `control_limits.py` | The handful of constants/helpers `nmpc_core.py` needs from the sim repo's LTV-QP module, lifted out so this repo doesn't need `cvxpy`/`clarabel`. |
 | `nmpc_controller.py` | **The ROS2 node.** Subscribes to the path/pose/sensor topics below, calls `nmpc_core.py` once per tick, publishes the command. This doc is about this file. |
 | `mock_pose_path_publisher.py` | Hardware-free bench stimulus — see "Bench-testing with no car" below. |
+| `bench_scenarios.py` | Path-shape generators (`straight`/`gentle_turn`/`sharp_turn`/`s_curve`, plus a randomized-start offset) the mock publisher dispatches on — see "Test scenarios" below. |
 | `nmpc_bench.rviz` | RViz config for the bench rig: Fixed Frame `map`, the centerline + predicted-trajectory `MarkerArray` displays pre-added. Loaded automatically by `nmpc_bench.launch.py use_viz:=true`. |
+| `nmpc_telemetry_gui.py` | Live matplotlib dashboard (bird's-eye car + predicted path + rolling error/command charts) — see "Live telemetry GUI" below. |
 
 ## How it fits into the pipeline
 
@@ -73,6 +75,7 @@ speed — open-loop, degrades gracefully, does not block the node from running.
 | `/fsae/control/cmd_vel` | `ackermann_msgs/AckermannDriveStamped` | The actual command: speed (m/s) + steering (deg). Consumed by `ack_to_can`. |
 | `/fsae/control/accel_cmd` | `ackermann_msgs/AckermannDriveStamped` | Placeholder (gap B1) — the NMPC's raw signed acceleration in `.drive.acceleration`. Nothing consumes this yet; it exists so the value isn't silently discarded. |
 | `/fsae/viz/nmpc_prediction_raw` | `geometry_msgs/PoseArray` | RViz visualization only, gated by `nmpc_publish_prediction_enabled` (default off, see below). `"map"`-frame Cartesian conversion of the predicted horizon. |
+| `/fsae/viz/nmpc_telemetry` | `std_msgs/String` (JSON) | `nmpc_telemetry_gui.py` only, gated by `nmpc_publish_telemetry_enabled` (default off). `last_telemetry`'s ~30 fields plus `vx_source`/`car_x`/`car_y`/`car_yaw` — see "Live telemetry GUI" below. |
 
 ## Running it
 
@@ -199,6 +202,113 @@ ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
     amplitude_m:=2.0 period_s:=6.0 forward_speed_mps:=2.0
 ```
 
+### Test scenarios
+
+`scenario` selects the mock path's shape (see `bench_scenarios.py`):
+
+| `scenario` | Shape | Notes |
+|---|---|---|
+| `straight` (default) | Flat line, `kappa = 0` everywhere | Unchanged from before this library existed — isolates `e_y` alone. |
+| `gentle_turn` | Straight-in → one constant-radius arc → straight-out | Recommended: `turn_radius_m:=25.0 turn_arc_deg:=30.0` |
+| `sharp_turn` | Same shape as `gentle_turn`, tighter numbers | Recommended: `turn_radius_m:=8.0 turn_arc_deg:=90.0` |
+| `s_curve` | Straight → arc → short straight → opposite-sign arc → straight | Uses the same `turn_radius_m`/`turn_arc_deg` for both bends |
+
+`randomize_start` (default off) is an **independent axis**, combinable with
+any scenario above — it offsets the car's initial `(y, yaw)` from the path's
+own start pose by a bounded random amount (`randomize_start_max_lateral_m`,
+default 1.0 m; `randomize_start_max_heading_deg`, default 15°), so you can
+bench-test convergence from an initial tracking error instead of starting
+exactly on the path. `randomize_start_seed` (default 0) makes the sampled
+offset reproducible — same seed, same offset, every run.
+
+`sweep_on_curve` controls what the car's pose does *in addition to* the
+scenario's path shape: on `scenario=straight` it defaults **on** (the
+original sine sweep, unchanged); on any curved scenario it defaults **off**
+instead — the car drives along the curve with zero `e_y`, isolating pure
+curvature-tracking, the mirror image of the straight scenario's own `e_y`
+isolation. Override either way explicitly if you want the sweep applied on
+top of a curve too (it becomes a lateral offset perpendicular to the path's
+local tangent, not a raw world-frame `y`).
+
+```bash
+# Gentle turn, pure curvature-tracking (sweep off by default here):
+ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
+    scenario:=gentle_turn turn_radius_m:=25.0 turn_arc_deg:=30.0
+
+# Sharp turn:
+ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
+    scenario:=sharp_turn turn_radius_m:=8.0 turn_arc_deg:=90.0
+
+# S-curve with a randomized starting offset:
+ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
+    scenario:=s_curve turn_radius_m:=15.0 turn_arc_deg:=45.0 randomize_start:=true
+
+# Gentle turn with the sweep re-enabled on top of the curve:
+ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true \
+    scenario:=gentle_turn sweep_on_curve:=true
+```
+
+RViz needs no changes for any of these — the camera's `Target Frame` is
+already `base_link` (see "The camera follows the car" above), which tracks
+the live car pose regardless of path shape.
+
+### Live telemetry GUI
+
+`nmpc_telemetry_gui.py` is a small matplotlib dashboard: a close-up
+bird's-eye view (triangle car marker, planner path, predicted trajectory)
+plus scrolling `e_y`/`e_psi`/steering strip charts (a bounded rolling
+15 s window, not an ever-growing plot) and a stat panel (`e_v`, `kappa`,
+`solve_ms`, throttle/brake, and the active `v_x` source). It's a small
+window (not fullscreen), separate from RViz.
+
+**It works identically in bench mode and live mode, with no code branching
+between them** — it subscribes to exactly five standard topics
+(`/fsae/planning/selected_trajectory`, `/fsae/slam/car_position`,
+`/fsae/viz/nmpc_prediction_raw`, `/fsae/viz/nmpc_telemetry`,
+`/fsae/control/cmd_vel`), all of which are genuinely populated in both
+modes.
+
+**Bench mode** (already the default when RViz is off too):
+
+```bash
+ros2 launch fsae_bringup nmpc_bench.launch.py use_gui:=true
+```
+
+`use_gui` defaults **on** for the bench rig (unlike `use_viz`, which
+defaults off) — the bench rig's whole purpose is human observation, and the
+GUI has near-zero setup cost. Set `use_gui:=false` to suppress it.
+
+**Live mode**, against the real stack:
+
+```bash
+ros2 launch fsae_bringup autonomous.launch.py controller:=nmpc use_gui:=true
+```
+
+`use_gui` defaults **off** here (matching `use_viz`'s own live-mode default).
+`controller:=nmpc` is required — `autonomous.launch.py` otherwise runs
+`stanley_controller`, which has no telemetry dict to publish.
+
+**Standalone** (against an already-running, separately-launched controller):
+
+```bash
+ros2 run fsae_control nmpc_telemetry_gui
+```
+
+Only useful if that controller was itself launched with
+`nmpc_publish_telemetry_enabled:=true` — otherwise the dashboard shows a
+"NO TELEMETRY" banner instead of stale numbers (it doesn't guess).
+
+**Fallback/placeholder fields, surfaced directly in the GUI, not hidden in a
+log:** the stat panel's `v_x source` line is a live readout of
+`nmpc_controller.py`'s own pre-existing fallback ladder (`_resolve_state()`),
+color-coded green (`car_odom`) / orange (`curr_vel`, `drive_status`) / red
+(`last_cmd (open-loop)`, tagged `[PLACEHOLDER]`). `car_odom` and `curr_vel`
+have no publisher in **either** bench or live mode today — this is a
+pre-existing, already-documented gap
+([`docs/NMPC_INTEGRATION_GAPS.md`](../../../../docs/NMPC_INTEGRATION_GAPS.md)
+GAP A1/A2/A3/A7), not something new; the GUI only surfaces the controller's
+own already-computed choice, it doesn't add a second fallback.
+
 If `rviz2` doesn't work under WSLg (a taskbar icon appears but no window
 ever renders), that's a WSLg/Windows-side compositor issue, not this launch
 file — try `wsl --shutdown` from a Windows terminal (not this one) and
@@ -245,6 +355,16 @@ colcon test-result --verbose
   steering sign/magnitude for a lateral or heading offset, correct
   accel/brake sign for a speed error, output limits respected under
   adversarial input.
+- `test_bench_scenarios.py` — pure-geometry checks for `bench_scenarios.py`:
+  the `straight` scenario matches the old inline path generation exactly,
+  turn/S-curve waypoints stay evenly spaced with bounded curvature, the
+  S-curve's two bends cancel, and `random_start_offset()` stays within its
+  stated bound.
+
+`nmpc_telemetry_gui.py` has no automated test — it's an interactive
+matplotlib app with a live ROS2 graph dependency, the same posture the bench
+rig's own mock publisher already takes for itself. Verify it by running it
+(see "Live telemetry GUI" above).
 
 ## Before running any of this on the real car
 

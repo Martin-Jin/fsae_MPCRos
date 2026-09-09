@@ -95,16 +95,39 @@ work is **superseded by this NMPC port**, not merged with it:
   disabled (the default).
 - **A hardware-free bench rig**
   (`control/fsae_control/fsae_control/mpc/mock_pose_path_publisher.py` +
-  `common/fsae_bringup/launch/nmpc_bench.launch.py`): publishes a fixed
-  straight reference path plus a car pose whose lateral offset sweeps back
-  and forth, so `nmpc_controller`'s actual command response can be watched
-  live with no car/camera/CAN/perception/planning/SLAM running at all —
-  `ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true`. See that
-  file's own module docstring for the exact math and why yaw is held fixed
-  at the path tangent. Not a closed-loop plant simulation (the mocked pose
-  doesn't react to the commanded output) and not a replacement for
+  `common/fsae_bringup/launch/nmpc_bench.launch.py`): publishes a reference
+  path plus a car pose, so `nmpc_controller`'s actual command response can
+  be watched live with no car/camera/CAN/perception/planning/SLAM running
+  at all — `ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true`.
+  Not a closed-loop plant simulation (the mocked pose doesn't react to the
+  commanded output) and not a replacement for
   `test_nmpc_signs_magnitudes.py`'s automated sign/magnitude checks — a
   live, human-in-the-loop counterpart to them.
+- **A test-path scenario library**
+  (`control/fsae_control/fsae_control/mpc/bench_scenarios.py`): the bench
+  rig's `scenario` param selects `straight` (default, unchanged), a
+  `gentle_turn`/`sharp_turn` (constant-radius arc, same code path, different
+  radius/arc numbers), or an `s_curve` (two opposite-sign arcs). An
+  independent `randomize_start` axis offsets the car's initial pose from
+  the path start by a bounded, seeded-reproducible random amount. See
+  `control/fsae_control/fsae_control/mpc/MPC_NODE_DOCS.md`'s "Test
+  scenarios" section for the full param table and example commands.
+- **A live telemetry GUI**
+  (`control/fsae_control/fsae_control/mpc/nmpc_telemetry_gui.py`): a small
+  matplotlib dashboard — a bird's-eye triangle car marker plus the planner
+  path and predicted trajectory, scrolling `e_y`/`e_psi`/steering strip
+  charts (a bounded rolling window, not an ever-growing plot), and a stat
+  panel including the active `v_x` fallback source, colour-coded so a
+  placeholder source is obvious rather than silently shown as a real
+  reading. Subscribes to five standard topics with **no mock-vs-live
+  branching** — it works identically in bench mode
+  (`nmpc_bench.launch.py use_gui:=true`, on by default there) and live mode
+  (`autonomous.launch.py controller:=nmpc use_gui:=true`). Reads a new
+  `/fsae/viz/nmpc_telemetry` topic (`std_msgs/String`, JSON — see
+  `nmpc_params.py`'s `nmpc_publish_telemetry_enabled`, default off, same
+  zero-cost-when-disabled convention as the RViz prediction publish above).
+  See `MPC_NODE_DOCS.md`'s "Live telemetry GUI" section for the full
+  command set.
 
 ## How to use it
 

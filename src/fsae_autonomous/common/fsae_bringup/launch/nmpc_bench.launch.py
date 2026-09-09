@@ -5,19 +5,21 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import FileContent, LaunchConfiguration
+from launch.substitutions import FileContent, LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 
-# NMPC bench test: mock_pose_path_publisher (synthetic e_y sweep, see its own
-# module docstring) + control.launch.py pinned to controller:=nmpc [+ viz +
-# rviz2 itself, pre-configured to show the planner path and the NMPC's
-# predicted trajectory]. No car / camera / CAN / perception / planning /
-# SLAM — deliberately does NOT include perception.launch.py /
-# slam.launch.py / planning.launch.py / can.launch.py, that absence is the
-# entire point. Watch /fsae/control/cmd_vel react live to a swept lateral
-# offset. NOT a closed-loop plant simulation — see mock_pose_path_publisher.py.
+# NMPC bench test: mock_pose_path_publisher (path-scenario library + swept/
+# along-path pose, see its own module docstring and bench_scenarios.py) +
+# control.launch.py pinned to controller:=nmpc [+ viz + rviz2, pre-configured
+# to show the planner path and the NMPC's predicted trajectory] + a live
+# matplotlib telemetry GUI (nmpc_telemetry_gui.py). No car / camera / CAN /
+# perception / planning / SLAM — deliberately does NOT include
+# perception.launch.py / slam.launch.py / planning.launch.py / can.launch.py,
+# that absence is the entire point. Watch /fsae/control/cmd_vel react live to
+# the mocked path/pose. NOT a closed-loop plant simulation — see
+# mock_pose_path_publisher.py.
 #
 # One command gets the whole bench running, no separate terminals needed:
 #   ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true
@@ -41,12 +43,44 @@ def generate_launch_description():
         DeclareLaunchArgument('path_length_m', default_value='100.0'),
         DeclareLaunchArgument('path_spacing_m', default_value='0.5'),
 
+        # Test-path scenario library (see bench_scenarios.py). scenario
+        # defaults 'straight' -- unchanged behavior with no args passed.
+        DeclareLaunchArgument('scenario', default_value='straight'),
+        DeclareLaunchArgument('turn_radius_m', default_value='15.0'),
+        DeclareLaunchArgument('turn_arc_deg', default_value='45.0'),
+        # sweep_on_curve: the node's own declared default is True (so an
+        # unset launch on scenario=straight is byte-identical to before this
+        # feature existed); here, the LAUNCH FILE supplies False whenever a
+        # curved scenario is selected, so curved scenarios isolate pure
+        # curvature-tracking (zero e_y) unless overridden back to True.
+        DeclareLaunchArgument(
+            'sweep_on_curve',
+            default_value=PythonExpression(
+                ["'", LaunchConfiguration('scenario'), "' == 'straight'"])),
+        DeclareLaunchArgument('randomize_start', default_value='false'),
+        DeclareLaunchArgument('randomize_start_seed', default_value='0'),
+        DeclareLaunchArgument('randomize_start_max_lateral_m', default_value='1.0'),
+        DeclareLaunchArgument('randomize_start_max_heading_deg', default_value='15.0'),
+
+        # Live telemetry GUI (nmpc_telemetry_gui.py). Default true here --
+        # unlike use_viz -- since the bench rig's whole purpose is human
+        # observation and the GUI has near-zero setup cost (no URDF/
+        # robot_state_publisher/rviz2 process chain).
+        DeclareLaunchArgument('use_gui', default_value='true'),
+        # Opting into the GUI opts into the telemetry it needs, same
+        # "consumer enables its producer" pattern nmpc_publish_prediction_
+        # enabled already uses for use_viz above.
+        DeclareLaunchArgument(
+            'nmpc_publish_telemetry_enabled', default_value=LaunchConfiguration('use_gui')),
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'control.launch.py')),
             launch_arguments={
                 'controller': 'nmpc',
                 'nmpc_publish_prediction_enabled':
                     LaunchConfiguration('nmpc_publish_prediction_enabled'),
+                'nmpc_publish_telemetry_enabled':
+                    LaunchConfiguration('nmpc_publish_telemetry_enabled'),
             }.items()),
 
         Node(
@@ -60,7 +94,25 @@ def generate_launch_description():
                 'forward_speed_mps': LaunchConfiguration('forward_speed_mps'),
                 'path_length_m': LaunchConfiguration('path_length_m'),
                 'path_spacing_m': LaunchConfiguration('path_spacing_m'),
+                'scenario': LaunchConfiguration('scenario'),
+                'turn_radius_m': LaunchConfiguration('turn_radius_m'),
+                'turn_arc_deg': LaunchConfiguration('turn_arc_deg'),
+                'sweep_on_curve': LaunchConfiguration('sweep_on_curve'),
+                'randomize_start': LaunchConfiguration('randomize_start'),
+                'randomize_start_seed': LaunchConfiguration('randomize_start_seed'),
+                'randomize_start_max_lateral_m':
+                    LaunchConfiguration('randomize_start_max_lateral_m'),
+                'randomize_start_max_heading_deg':
+                    LaunchConfiguration('randomize_start_max_heading_deg'),
             }],
+        ),
+
+        Node(
+            package='fsae_control',
+            executable='nmpc_telemetry_gui',
+            name='nmpc_telemetry_gui',
+            output='screen',
+            condition=IfCondition(LaunchConfiguration('use_gui')),
         ),
 
         IncludeLaunchDescription(

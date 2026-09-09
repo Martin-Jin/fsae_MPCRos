@@ -317,6 +317,17 @@ class NMPCParams:
                 "on the solve) so there is no per-tick cost unless opted in.",
         "controller": "nmpc_only",
     })
+    nmpc_publish_telemetry_enabled: bool = field(default=False, metadata={
+        "unit": "bool",
+        "desc": "true -> JSON-serialise NMPCController.last_telemetry (plus "
+                "vx_source and the car's own pose) onto /fsae/viz/"
+                "nmpc_telemetry each tick, for nmpc_telemetry_gui.py "
+                "(GAP F1's stopgap: no other telemetry topic exists in this "
+                "repo). Default false: skips the dict-copy/json.dumps entirely "
+                "so there is no per-tick cost unless opted in, mirroring "
+                "nmpc_publish_prediction_enabled's own convention.",
+        "controller": "nmpc_only",
+    })
 
 
 DEFAULT_NMPC_PARAMS = NMPCParams()
