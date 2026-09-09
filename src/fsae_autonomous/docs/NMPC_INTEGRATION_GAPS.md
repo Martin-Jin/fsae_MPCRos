@@ -1,5 +1,61 @@
 # NMPC integration gaps
 
+**This controller is not car-ready. It has never been built, run, or tested against
+real hardware.** The rest of this document is a full inventory of every mismatch found
+while porting it; this section is the short list of why it cannot be driven today.
+
+## Critical blockers (read this before anything else)
+
+1. **Never built or run.** No colcon build, no bag replay, no bench test has happened
+   against this code. It has been reviewed and syntax/import-checked, nothing more.
+2. **The CAN command path is physically disconnected.** `candapter_node` (the node that
+   opens the actual CANdapter USB-serial device onto the car's CAN bus) is commented out
+   in `common/fsae_bringup/launch/can.launch.py`, deliberately, as a standing safety
+   default — see the comment there. Nothing published by any controller (Stanley or
+   this NMPC) reaches the vehicle until someone re-enables it **at the car, with the
+   adapter physically connected**. This is a manual, presence-gated step, not something
+   to flip on from a repo change (gap B8).
+3. **There is no active braking, at all, anywhere in this repo.** A negative `a_cmd`
+   from the NMPC is never sent to the car as a brake command — it is converted into a
+   *lower requested speed* (`v_cmd = clip(car_speed + a_cmd * horizon, 0, v_max)`, gap
+   B3) because the CAN frame has no working negative-acceleration field (`ack_to_can.py`
+   rejects it outright, gap B1/B2). "Braking" today means asking for less speed and
+   hoping the car coasts down in time — there is no confirmation anywhere in this repo
+   that the vehicle can actually decelerate on demand. The cone-proximity emergency stop
+   (gap 4 in the phase list) sets `v_cmd = 0.0` for exactly this reason, and that is the
+   full extent of the car's ability to "brake" through this controller.
+4. **No real speed, yaw-rate, or lateral-velocity sensor exists on the car.** The NMPC's
+   model needs all three every tick; today `v_x` falls back through an unfilled topic to
+   1 m/s-resolution CAN data to the controller's own last commanded speed (open-loop),
+   `v_y` is hardcoded `0.0`, and yaw rate is a one-tick-delayed finite difference of
+   noisy visual odometry (gaps A1-A3). Feeding a nonlinear vehicle model wrong slip
+   angles at real cornering speed is a materially different, and materially worse,
+   failure mode than Stanley being wrong — Stanley has no model to be wrong about.
+5. **A rejected CAN frame silently latches the previous command instead of stopping the
+   car.** `ack_to_can.py` drops the whole message and keeps transmitting whatever was
+   sent last tick on any out-of-range field. This is worked around on the publishing
+   side (clamping, finite-value guards, an explicit safe-stop command) but the
+   underlying CAN-bridge behavior itself is unchanged and is the single most dangerous
+   failure mode in the chain (gap B6).
+6. **Every physical parameter and every tuned weight describes the FSDS simulated car,
+   not this vehicle** — wheelbase, mass, yaw inertia, tyre stiffness, max accel/brake,
+   and all ~56 Q/R weights (gap group D). The one FSDS-specific artifact that was
+   correctable in software (`alat_ceiling`) has been disabled; nothing else has been
+   re-measured or re-validated against the real chassis.
+7. **The yaw convention is unverified.** Stanley's own code carries an unresolved
+   warning that its yaw-frame correction is "almost certainly wrong" since the camera
+   initialization changed, and it has never been re-tested. A wrong yaw sign is far more
+   consequential fed into a model-based controller than into Stanley's simple loop
+   (gap A5).
+
+None of the above is fixed by this port — each is documented, and several are worked
+around defensively (clamping, safe-stop fallbacks, a documented fallback ladder) so nothing
+here fails silently. But "handled defensively" is not the same as "safe to drive." The
+recommended order to close these is in this document's final section; the bring-up ladder
+in the accompanying plan does not skip any of rungs 1-4 before attempting real driving.
+
+---
+
 The nonlinear MPC controller (`control/fsae_control/fsae_control/mpc/nmpc_core.py`,
 ported from the sim tree's `fsae_planning` repo) needs six things about the car every
 tick that this repo did not previously produce, plus one thing it cannot cleanly send.
@@ -462,8 +518,9 @@ straightforward "measure it before trusting the output" list.
 | ID | Gap |
 |---|---|
 | E1 | `osqp` was declared nowhere in this repo before this port (now added to `requirements.txt` and noted in `fsae_control/package.xml` as pip-only, matching the sim tree's convention for the same dependency). `scipy` was similarly undeclared as a rosdep for `fsae_control` specifically — added as `python3-scipy`, needed for `scipy.sparse` and `scipy.interpolate.CubicSpline` inside `nmpc_core.py`. |
-| E2 | Solve-time budget is unvalidated on the target hardware. The sim tree measured 9.1 ms mean / 12.4 ms p95 per solve at the shipped horizon length (N=20) on a desktop; the SQP, its Jacobians, and the QP condensing are pure-Python numpy with no compiled/generated solver. Whether `nmpc_solve_budget_ms = 25.0` (half the 50 ms control period) holds on the actual Jetson is unknown until measured there. |
+| E2 | Solve-time budget is unvalidated on the target hardware. The sim tree measured 9.1 ms mean / 12.4 ms p95 per solve at the shipped horizon length (N=20) on a desktop; the SQP, its Jacobians, and the QP condensing are pure-Python numpy with no compiled/generated solver. Whether `nmpc_solve_budget_ms = 25.0` (half the 50 ms control period) holds on the actual Jetson is unknown until measured there. **This gap is now more load-bearing**: `nmpc_jac_substeps` was raised from 1 to 4 (see `nmpc_params.py`'s own field docstring, and `fsae_MPCTest/docs/logs/nmpc_low_speed_accel_stall_investigation.md`) to fix a confirmed low-speed (below ~6.5-7 m/s) numerical instability that froze steering/accel output at exactly zero; the fix's own measured cost on a desktop is mean solve time 9.56ms→18.63ms, **p95 23.61ms, max 38.86ms** against the 25ms budget — closer to the deadline than before, not just unmeasured on target. |
 | E3 | Nothing upstream of the controller runs at a fixed rate (perception is camera-rate, SLAM is detection-rate, planning is pose-rate — see C4), so in practice the controller will routinely solve against a pose and a path that are each some ticks old, more often than the sim tree's more uniform pipeline does. |
+| E4 | `nmpc_jac_substeps=4` does **not** fully close the low-speed stall: a second, narrower dead zone remains at roughly **2.3-3.2 m/s**, where the solver still produces exact zero steering/accel output (`nmpc_status`=solve-failed), confirmed directly on `fsae_autonomous`'s own bench rig on the steering channel (the original investigation found this via the acceleration channel only). Above ~3.6 m/s and below ~2.2 m/s, `nmpc_jac_substeps=4` is confirmed stable and correctly signed (cross-checked against `nmpc_jac_substeps=8/16/32`, all agreeing to 4 decimal places). Raising substeps further does not fix this band (already ruled out in the investigation doc) — a different, unexplained mechanism is at fault there. Do not run the bench rig or trust a live run in this speed range until this is separately investigated. |
 
 ---
 

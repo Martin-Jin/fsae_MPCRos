@@ -184,22 +184,45 @@ def test_steer_sign_corrects_heading_error(yaw_offset_deg, expected_sign):
 
 @pytest.mark.parametrize('direction,expected_sign', [('left', +1), ('right', -1)])
 def test_steer_sign_matches_corner_direction(direction, expected_sign):
-    """Car dead on-line, approaching a known bend well within the horizon's
-    reach (v * N * dt) -- must plan steering toward the bend's own
-    direction, not away from it or zero (see nmpc_offline_check.py's
-    TURN-IN check on the sim side for the structural reason this matters).
+    """Car dead on-line, sitting right at a known bend's own entry, well
+    within the horizon's reach (v * N * dt) -- must plan steering toward
+    the bend's own direction, not away from it or zero (see
+    nmpc_offline_check.py's TURN-IN check on the sim side for the
+    structural reason this matters).
 
-    straight_m is deliberately kept BELOW the horizon's reach (v * N * dt =
-    6 * 20 * 0.05 = 6.0 m at these defaults) -- a bend further away than
-    that is genuinely outside the prediction horizon, and correctly planning
-    ~0 steering for it is not a failure (see nmpc_offline_check.py's own
-    in-reach/out-of-reach split). An earlier version of this test used
-    straight_m=8.0, ITSELF beyond the 6 m reach, and asserted "real
-    steering" anyway -- a bug in the test, not the solver."""
+    car_speed=8.0 and car_pos placed AT the corner's start (not several
+    metres before it) are both deliberate: nmpc_jac_substeps=4's fix for
+    the documented low-speed Jacobian instability (see nmpc_params.py's
+    own field docstring and fsae_MPCTest/docs/logs/
+    nmpc_low_speed_accel_stall_investigation.md) leaves two things this
+    test must stay clear of, confirmed by direct investigation --
+
+    1. A speed=6.0, straight_m=3.0 (car several metres BEFORE the bend)
+       version of this test used to pass under the old nmpc_jac_substeps=1
+       default, but only because that default was numerically unstable at
+       this speed (cost oscillated 8.24->2.06->8.76->7.99 over 12 ticks,
+       never converging) and happened to land near the expected sign by
+       chance on the 12th tick. Once the Jacobian is stable
+       (nmpc_jac_substeps=4, confirmed independently at =8/16/32 too, all
+       agreeing to 4 decimal places), the TRUE converged answer at that
+       exact geometry is the OPPOSITE sign: a real, reproducible front-axle
+       lookahead effect (the car briefly aims fractionally away before
+       turning in, confirmed via the predicted trajectory) when the bend is
+       a few metres ahead rather than already reached, not a bug in either
+       the old or new substep count. Placing the car AT the corner's start
+       removes this near-field ambiguity entirely -- confirmed stable and
+       correctly signed at straight_m=10.0/15.0/20.0 alike.
+    2. A residual, narrower dead zone (~2.3-3.2 m/s, exact zero output,
+       solve status failed) is NOT fixed by nmpc_jac_substeps=4 -- see
+       docs/NMPC_INTEGRATION_GAPS.md. car_speed=8.0 is clear of both this
+       band and the ~6.5-7 m/s band the substeps fix addresses, so this
+       test only exercises the regime nmpc_jac_substeps=4 actually fixes."""
     ctrl = make_controller()
-    path = corner_path(direction, straight_m=3.0, radius=10.0)
-    delta, _accel, tel = run_ticks(ctrl, path, car_pos=(0.0, 0.0), car_yaw=0.0,
-                                   car_speed=6.0, desired_speed=6.0, n_ticks=12)
+    straight_m = 15.0
+    path = corner_path(direction, straight_m=straight_m, radius=10.0)
+    delta, _accel, tel = run_ticks(
+        ctrl, path, car_pos=(straight_m - 1.0, 0.0), car_yaw=0.0,
+        car_speed=8.0, desired_speed=8.0, n_ticks=12)
     assert math.copysign(1, delta) == expected_sign, (
         f'{direction} corner: expected steer sign {expected_sign}, '
         f'got delta_cmd={math.degrees(delta):.2f} deg'
@@ -227,36 +250,19 @@ def test_tighter_corner_demands_more_steering_than_gentler_one():
 # Longitudinal: accelerate below target, brake above target
 # ---------------------------------------------------------------------------
 
-ACCEL_DEAD_ZONE_REASON = (
-    'REPRODUCIBLE ANOMALY, precisely localized, not a test bug -- flagging per '
-    'project convention (record a falsified/unexpected result explicitly, do not '
-    'silently drop it). With the car dead on-line, dead aligned (e_y=e_psi=v_y=r='
-    'delta_act=a_act all exactly 0) on a straight path, compute() commands '
-    'a_cmd ~= 0 (< 1e-9, often < 1e-25) for essentially the WHOLE car_speed range '
-    '[2.5, 5.6] m/s, regardless of how large the car_speed/desired_speed gap is -- '
-    'a sweep at a constant +5.0 m/s gap gives a_cmd=+2.43 at 0.5 m/s, decaying '
-    'smoothly through the zero band, then RECOVERING to a saturated +4.80 at and '
-    'above ~5.8-6.0 m/s. The dead zone\'s lower edge (2.5 m/s) is EXACTLY '
-    'nmpc_core._Plant.v_blend_hi -- the kinematic/dynamic blend fully engages '
-    '(blend=1.0) at exactly this speed, which is the strongest lead on the '
-    'mechanism. Braking from a real moving speed (car_speed=15 -> desired=5, '
-    'a_cmd=-4.2) is UNAFFECTED -- this is not "acceleration is broken", it is a '
-    'narrow, speed-keyed dead zone. Confirmed: (1) reproduces IDENTICALLY against '
-    'the pristine, unmodified sim-tree nmpc_core.py, not introduced by this port; '
-    '(2) a direct finite-difference of _cost() at car_speed=4 confirms a large, '
-    'real cost reduction IS available by accelerating (cost drops 7392 -> 5126 at '
-    'a_pert=5.0 m/s^2) -- the true objective is sensitive, but the QP\'s solved dU '
-    'stays ~0 regardless; (3) not warm-start-specific (a feasible nonzero '
-    'U[:,1]=0.3 seed does not escape it). Root cause not isolated further: this is '
-    'squarely in NMPC-solver-internals territory (CLAUDE.md: reserved for the most '
-    'expensive/high-effort model tier, "a wrong mechanism can pass offline '
-    'validation and still be wrong") and deliberately was NOT root-caused or fixed '
-    'in this session -- see the chat transcript for the full diagnostic trail '
-    '(including a look at A_k/S condensation magnitudes) before attempting a fix.'
-)
+# Historical note: this dead zone (car_speed in roughly [2.5, 5.6] m/s giving
+# a_cmd ~= 0 regardless of the speed gap) was root-caused to
+# nmpc_jac_substeps=1 being numerically unstable at low speed -- see
+# nmpc_params.py's own field docstring and fsae_MPCTest/docs/logs/
+# nmpc_low_speed_accel_stall_investigation.md for the full derivation. Fixed
+# by raising nmpc_jac_substeps to 4 (make_controller()'s default,
+# NMPCParams' own default). car_speed=4.0 (used by both tests below) is
+# confirmed clear of the residual narrower dead zone that fix does NOT
+# close (~2.3-3.2 m/s, see docs/NMPC_INTEGRATION_GAPS.md GAP E4) -- both
+# tests now assert real, meaningful, correctly-monotonic behaviour rather
+# than xfail-ing a known-broken accidental pass.
 
 
-@pytest.mark.xfail(reason=ACCEL_DEAD_ZONE_REASON, strict=False)
 def test_accelerates_when_below_target_speed():
     ctrl = make_controller()
     path = straight_path()
@@ -277,17 +283,9 @@ def test_brakes_when_above_target_speed():
     assert accel < -0.5, f'should be braking toward a much lower target, got {accel:.2f} m/s^2'
 
 
-@pytest.mark.xfail(reason=ACCEL_DEAD_ZONE_REASON, strict=False)
 def test_larger_speed_error_demands_more_accel_authority():
     """Monotonicity: a bigger shortfall below target should not command
-    LESS acceleration than a smaller shortfall, at the same current speed.
-
-    Both operating points chosen here (car_speed=4.0, target 6.0 or 14.0) fall
-    inside the dead zone described in ACCEL_DEAD_ZONE_REASON, so both give
-    accel ~= 0 and the `>=` assertion below is a FALSE POSITIVE if run without
-    xfail (0 >= 0 trivially holds despite neither side producing a real,
-    meaningful acceleration) -- caught by manually inspecting the actual values
-    (9.6e-27 and 4.4e-26) rather than trusting the assertion's pass/fail alone."""
+    LESS acceleration than a smaller shortfall, at the same current speed."""
     path = straight_path()
     accels = []
     for target in (6.0, 14.0):

@@ -109,13 +109,26 @@ class NMPCParams:
         "controller": "nmpc_only",
     })
 
-    nmpc_jac_substeps: int = field(default=1, metadata={
+    nmpc_jac_substeps: int = field(default=4, metadata={
         "unit": "substeps",
         "desc": "RK4 substeps used when finite-differencing the QP's A_k/B_k "
-                "sensitivities. Deliberately coarser than nmpc_rk_substeps: "
-                "these only set the SQP STEP DIRECTION, never the predicted "
-                "trajectory, and this is the dominant cost per iteration "
-                "(see nmpc_core._jacobians)",
+                "sensitivities. Was 1 (coarser than nmpc_rk_substeps=2, on the "
+                "assumption that a less-accurate Jacobian only costs a "
+                "slightly worse SQP step direction) until the (v_y, r) "
+                "sub-dynamics were found to go numerically UNSTABLE (not just "
+                "less accurate) below ~6.5-7 m/s with only 1 substep -- RK4's "
+                "stability limit is exceeded, the divergence compounds across "
+                "the horizon's condensing loop, and the Hessian becomes so "
+                "ill-conditioned that OSQP's only representable solution is "
+                "exactly zero steering/accel, frozen once warm-started into "
+                "that state. 4 is the validated fix: see "
+                "fsae_MPCTest/docs/logs/nmpc_low_speed_accel_stall_"
+                "investigation.md for the root-cause derivation, the "
+                "substeps=1/2/4 comparison (2 is insufficient at 2.5-3.0 "
+                "m/s), and the full closed-loop lap A/B (tracking improves, "
+                "but mean solve time nearly doubles and p95 approaches the "
+                "nmpc_solve_budget_ms=25ms deadline -- not yet measured on "
+                "embedded/Jetson hardware, see GAP E2)",
         "controller": "nmpc_only",
     })
 
