@@ -4,14 +4,20 @@
 from geometry_msgs.msg import Point, Quaternion, Pose, Vector3, PoseArray
 from visualization_msgs.msg import Marker, MarkerArray
 from fsae_interfaces.msg import AllTrajectories
-from ackermann_msgs.msg import AckermannDrive
+from ackermann_msgs.msg import AckermannDrive, AckermannDriveStamped
 
 from builtin_interfaces.msg import Time, Duration
 from std_msgs.msg import Int16, Int32MultiArray, ColorRGBA
 
+import math
+
 import rclpy
 from rclpy.node import Node
 import numpy as np
+
+# Arrow length is fixed (screen-readable regardless of steering magnitude),
+# not scaled by the angle itself -- only its DIRECTION encodes steer_deg.
+STEERING_ARROW_LENGTH_M = 2.0
 
 # foxglove LinePrimitive thickness was screen-pixels (scale_invariant); RViz LINE_STRIP
 # scale.x is line width in metres. Scale down so widths are sensible on a real track.
@@ -46,6 +52,19 @@ class pub_viz(Node):
             PoseArray, "/fsae/viz/nmpc_prediction_raw", self.show_nmpc_prediction, 10)
         self.nmpc_prediction_pub = self.create_publisher(
             MarkerArray, "/fsae/viz/nmpc_prediction", 10)
+
+        # Steering-command arrow: whichever controller is active
+        # (Stanley or NMPC both publish AckermannDriveStamped here), combined
+        # with the car's own current position/yaw so the arrow renders AT the
+        # car and its direction is the car's heading plus the commanded
+        # steering angle, not the steering angle alone.
+        self._car_pos = None
+        self._car_yaw = 0.0
+        self.create_subscription(Pose, "/fsae/slam/car_position", self._on_car_position, 10)
+        self.create_subscription(
+            AckermannDriveStamped, "/fsae/control/cmd_vel", self.show_steering_arrow, 10)
+        self.steering_arrow_pub = self.create_publisher(
+            MarkerArray, "/fsae/viz/steering_arrow", 10)
 
         self.id = 1
 
@@ -121,6 +140,44 @@ class pub_viz(Node):
         line = self.make_line_marker(
             0, points, ColorRGBA(r=1.0, g=0.6, b=0.0, a=1.0), thickness=2.0)
         self.nmpc_prediction_pub.publish(MarkerArray(markers=[self.delete_all_lines(), line]))
+
+    def _on_car_position(self, msg: Pose) -> None:
+        # x,y in position; yaw (rad) in orientation.w -- repo-wide convention,
+        # not a real quaternion, see nmpc_controller.py's module docstring.
+        self._car_pos = (msg.position.x, msg.position.y)
+        self._car_yaw = msg.orientation.w
+
+    def show_steering_arrow(self, msg: AckermannDriveStamped) -> None:
+        """
+        A short arrow at the car's current position, pointing in car_yaw +
+        steering_angle -- the actual direction the front wheels are
+        currently commanded to point, not just the raw angle in isolation.
+        msg.drive.steering_angle is DEGREES (repo convention, see
+        AckermannDriveStamped publishers in nmpc_controller.py/
+        stanley_controller.py), converted to radians here since car_yaw and
+        every quaternion-from-yaw helper in this file work in radians.
+        """
+        if self._car_pos is None:
+            return
+        heading = self._car_yaw + math.radians(msg.drive.steering_angle)
+        arrow = Marker()
+        arrow.header.frame_id = "map"
+        arrow.header.stamp = self.get_clock().now().to_msg()
+        arrow.ns = "control"
+        arrow.id = 0
+        arrow.type = Marker.ARROW
+        arrow.action = Marker.ADD
+        arrow.pose.position.x = self._car_pos[0]
+        arrow.pose.position.y = self._car_pos[1]
+        arrow.pose.position.z = 0.5   # lift above the car model so it isn't buried in the mesh
+        arrow.pose.orientation.z = math.sin(heading / 2.0)
+        arrow.pose.orientation.w = math.cos(heading / 2.0)
+        arrow.scale = Vector3(
+            x=STEERING_ARROW_LENGTH_M, y=STEERING_ARROW_LENGTH_M * 0.15,
+            z=STEERING_ARROW_LENGTH_M * 0.15)
+        arrow.color = ColorRGBA(r=1.0, g=0.0, b=1.0, a=1.0)   # magenta, distinct from every other marker
+        arrow.lifetime = Duration(sec=0, nanosec=500000000)
+        self.steering_arrow_pub.publish(MarkerArray(markers=[arrow]))
 
     def make_line_marker(self, id, points, color, thickness):
         marker = Marker()

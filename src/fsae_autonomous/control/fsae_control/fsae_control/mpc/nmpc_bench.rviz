@@ -97,6 +97,18 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /fsae/viz/nmpc_prediction
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Steering command
+      Namespaces:
+        {}
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /fsae/viz/steering_arrow
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

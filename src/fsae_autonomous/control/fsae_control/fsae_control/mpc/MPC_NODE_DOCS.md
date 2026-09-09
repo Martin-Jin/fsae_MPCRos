@@ -179,6 +179,19 @@ offsets. `robot_state_publisher` (a standard ROS2 package, not something
 this repo wrote) serves the URDF; every joint in it is fixed, so no
 `JointState` publisher is needed.
 
+### The steering-command arrow
+
+A short magenta arrow, always `STEERING_ARROW_LENGTH_M` (2 m) long
+regardless of angle magnitude, renders at the car's current position and
+points in `car_yaw + steering_angle` — the actual direction the front
+wheels are currently commanded toward, not just the raw angle in isolation.
+Published on `/fsae/viz/steering_arrow` by `visualise_trajectories.py`'s
+`show_steering_arrow()`, which combines whichever controller's
+`/fsae/control/cmd_vel` (Stanley and NMPC both publish
+`AckermannDriveStamped` there) with the car's own `/fsae/slam/car_position`.
+Works for either controller, not NMPC-specific, since it reads the same
+output topic every controller in this repo already publishes.
+
 Optional sweep overrides:
 
 ```bash
