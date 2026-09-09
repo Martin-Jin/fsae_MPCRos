@@ -139,8 +139,13 @@ nmpc_controller:
     nmpc_horizon: 20
     nmpc_sqp_iters: 1
     nmpc_solve_budget_ms: 25.0   # GAP E2 -- measured on a desktop, not yet on target Jetson hardware
-    nmpc_rk_substeps: 2
-    nmpc_jac_substeps: 1
+    # Both substep counts are set by the (v_y, r) lateral stiffness, which
+    # scales as 1/v_x and so gets worse as the car slows. Anything lower is
+    # RK4-unstable at low speed, not merely less accurate, and freezes the
+    # controller at exactly zero steering/accel. See
+    # fsae_MPCTest/docs/logs/nmpc_low_speed_accel_stall_investigation.md
+    nmpc_rk_substeps: 4
+    nmpc_jac_substeps: 4
     nmpc_trust_delta_rad: 0.15707963267948966
     nmpc_trust_a: 0.6
     nmpc_backtrack_max: 2

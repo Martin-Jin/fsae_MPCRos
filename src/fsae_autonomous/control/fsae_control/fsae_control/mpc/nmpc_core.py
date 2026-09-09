@@ -1371,14 +1371,21 @@ class NMPCController:
         each perturbation direction costs ONE batched one-step integration of
         all N stages rather than N scalar ones (10 batched steps total).
 
-        These use nmpc_jac_substeps (default 1) rather than the rollout's
-        nmpc_rk_substeps (default 2), which halves the cost of the dominant
-        term in a Gauss-Newton iteration. That is a deliberate, safe
-        asymmetry: A_k/B_k only supply the QP's STEP DIRECTION, they never
-        define the predicted trajectory (the rollout does, and it is exact to
-        RK4 x n_sub). A slightly coarser sensitivity costs at most a slightly
-        worse step, which the next iteration and the trust region absorb; the
-        prediction itself is unaffected.
+        These use nmpc_jac_substeps, which now matches the rollout's
+        nmpc_rk_substeps (both 4). It used to be deliberately coarser (1 vs 2)
+        to halve the cost of the dominant term in a Gauss-Newton iteration,
+        on the argument that A_k/B_k only supply the QP's STEP DIRECTION and
+        never the predicted trajectory, so a coarser sensitivity costs at most
+        a slightly worse step that the next iteration and the trust region
+        absorb.
+
+        That argument is sound about ACCURACY and wrong about STABILITY, which
+        is what actually bit. The (v_y, r) sub-dynamics stiffen as 1/v_x, so
+        below roughly 3.5 m/s too few substeps make this integration
+        divergent rather than inaccurate. A divergent A_k does not degrade
+        gracefully: it compounds through the condensing loop and leaves a
+        Hessian whose only representable solution is exactly zero. Keep both
+        counts at 4 and do not re-introduce the asymmetry as a cost saving.
         """
         N = self.N
         Xs = X[:N]

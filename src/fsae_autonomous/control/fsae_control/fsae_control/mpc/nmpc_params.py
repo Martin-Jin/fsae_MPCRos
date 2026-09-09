@@ -101,11 +101,28 @@ class NMPCParams:
                 "period, leaving the rest of the tick for the node",
         "controller": "nmpc_only",
     })
-    nmpc_rk_substeps: int = field(default=2, metadata={
+    nmpc_rk_substeps: int = field(default=4, metadata={
         "unit": "substeps",
-        "desc": "RK4 substeps per dt in the prediction rollout. 2 is needed "
-                "because tau_a=0.02 s is stiff against dt=0.05 s (lambda*dt = "
-                "-2.5, near RK4's real-axis stability edge)",
+        "desc": "RK4 substeps per dt in the prediction rollout. Two separate "
+                "stiff modes set this, and only the first was accounted for "
+                "originally: tau_a=0.02 s against dt=0.05 s (lambda*dt = -2.5, "
+                "near RK4's real-axis stability edge), which 2 substeps "
+                "covers, AND the (v_y, r) lateral sub-dynamics, whose "
+                "eigenvalues scale as 1/v_x and so get STIFFER as the car "
+                "slows. At 2 substeps the rollout is outright unstable (not "
+                "merely inaccurate) across roughly 2.25-3.5 m/s: an "
+                "infinitesimal disturbance is amplified ~6e8 over a 20-stage "
+                "horizon, so the PREDICTION itself is garbage and every "
+                "line-search trial scores worse than the unstepped iterate, "
+                "which freezes the controller at exactly zero steering/accel. "
+                "3 is not enough (still unstable at 2.50 m/s exactly); 4 "
+                "decays cleanly over the whole 0.1-25 m/s envelope. This is "
+                "the SAME stiffness mechanism as nmpc_jac_substeps below, but "
+                "a distinct defect: that one corrupts the QP's step "
+                "DIRECTION, this one corrupts the predicted TRAJECTORY the "
+                "step is scored against, so raising jac_substeps alone does "
+                "not fix it. See fsae_MPCTest/docs/logs/nmpc_low_speed_"
+                "accel_stall_investigation.md",
         "controller": "nmpc_only",
     })
 
