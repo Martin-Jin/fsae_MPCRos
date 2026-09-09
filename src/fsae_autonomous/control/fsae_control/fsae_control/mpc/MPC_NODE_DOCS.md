@@ -10,6 +10,15 @@ For the full list of hardware/sensor gaps and how each is worked around, see
 [`docs/NMPC_INTEGRATION_GAPS.md`](../../../../docs/NMPC_INTEGRATION_GAPS.md)
 (**read that before running this on the car**).
 
+**Every `colcon`/`ros2` command below must be run from the `ros2_autonomous/`
+workspace root**, not the outer FSDS repo root. The outer repo also contains
+the sim tree (`ros2/src/fsae_planning`) and the offline-tuning mirror
+(`fsae_MPCTest/fsds_simulator`), both of which carry their own
+`fsae_control`/`fsae_bringup` packages — running `colcon build` from the
+outer root sees all three copies at once and refuses with a "Duplicate
+package names" error. `ros2_autonomous/` is this repo's own dedicated
+colcon workspace, kept isolated from the sim tree for exactly this reason.
+
 ## What's in this folder
 
 | File | What it is |
@@ -67,6 +76,7 @@ speed — open-loop, degrades gracefully, does not block the node from running.
 ## Running it
 
 ```bash
+cd ros2_autonomous
 colcon build --packages-select fsae_control
 source install/setup.bash
 ros2 launch fsae_bringup control.launch.py controller:=nmpc
@@ -89,13 +99,16 @@ ros2 launch fsae_bringup control.launch.py controller:=nmpc path_map_path:=/path
 
 ## Visualizing the predicted trajectory in RViz
 
-Off by default (zero added per-tick cost when unset). Turn it on with:
+Off by default (zero added per-tick cost when unset). From the
+`ros2_autonomous/` workspace root (built and sourced as above), turn it on
+with:
 
 ```bash
 ros2 launch fsae_bringup control.launch.py controller:=nmpc nmpc_publish_prediction_enabled:=true
 ```
 
-Then, separately, start the visualization nodes and RViz:
+Then, in a second terminal (`source install/setup.bash` again there too),
+start the visualization nodes and RViz:
 
 ```bash
 ros2 launch fsae_bringup viz.launch.py
@@ -125,6 +138,7 @@ lets `nmpc_controller` run and be watched with **no car, camera, CAN bus, or
 perception/planning/SLAM node running at all**.
 
 ```bash
+cd ros2_autonomous
 colcon build --packages-select fsae_control fsae_bringup
 source install/setup.bash
 ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true
@@ -161,6 +175,7 @@ manual bring-up/demo/debugging.
 ## Running the tests
 
 ```bash
+cd ros2_autonomous
 colcon build --packages-select fsae_control
 source install/setup.bash
 colcon test --packages-select fsae_control --pytest-args -v
