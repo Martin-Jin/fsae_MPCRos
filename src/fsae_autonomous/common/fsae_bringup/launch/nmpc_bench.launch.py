@@ -5,8 +5,9 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import FileContent, LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 # NMPC bench test: mock_pose_path_publisher (synthetic e_y sweep, see its own
@@ -65,6 +66,28 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'viz.launch.py')),
             condition=IfCondition(use_viz)),
+
+        # Renders an actual car body (not just a bare TF frame) at the live
+        # map -> base_link transform cone_map_viz (started by viz.launch.py
+        # above) broadcasts from /fsae/slam/car_position. gocartv1.urdf.xml's
+        # root link is literally named "base_link", so no static offset is
+        # needed. Every joint in this URDF is fixed, so robot_state_publisher
+        # needs no JointState input -- see fsae_description's own
+        # urdf_model.launch.py for the same pattern.
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            condition=IfCondition(use_viz),
+            parameters=[{
+                'robot_description': ParameterValue(
+                    FileContent(os.path.join(
+                        get_package_share_directory('fsae_description'),
+                        'urdf', 'gocartv1.urdf.xml')),
+                    value_type=str),
+            }],
+        ),
 
         ExecuteProcess(
             cmd=['rviz2', '-d', rviz_config],

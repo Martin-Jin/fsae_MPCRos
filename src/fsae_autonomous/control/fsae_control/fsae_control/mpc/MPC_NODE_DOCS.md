@@ -142,13 +142,42 @@ ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true
 ```
 
 That single command starts the mock publisher, `nmpc_controller`, the four
-`fsae_visualization` marker nodes, **and `rviz2` itself**, pre-loaded with
-`mpc/nmpc_bench.rviz` (Fixed Frame `map`, the `/fsae/viz/centerline` and
-`/fsae/viz/nmpc_prediction` `MarkerArray` displays already added) — no
-separate terminals or manual Display setup needed. `use_viz:=true` also
-defaults `nmpc_publish_prediction_enabled:=true` (independently overridable,
-e.g. `use_viz:=true nmpc_publish_prediction_enabled:=false` to watch
-`cmd_vel` only with no viz).
+`fsae_visualization` marker nodes, `robot_state_publisher` (see "The car
+model" below), **and `rviz2` itself**, pre-loaded with `mpc/nmpc_bench.rviz`
+(Fixed Frame `map`, the car model plus the `/fsae/viz/centerline` and
+`/fsae/viz/nmpc_prediction` `MarkerArray` displays already added, camera
+locked to follow the car) — no separate terminals or manual Display setup
+needed. `use_viz:=true` also defaults `nmpc_publish_prediction_enabled:=true`
+(independently overridable, e.g. `use_viz:=true
+nmpc_publish_prediction_enabled:=false` to watch `cmd_vel` only with no
+viz).
+
+**The camera follows the car**, not the fixed map origin: the view's
+Target Frame is `base_link`, the live `map -> base_link` transform
+`cone_map_viz` (one of the four `fsae_visualization` nodes) broadcasts
+every time `/fsae/slam/car_position` updates. With `forward_speed_mps` at
+its default (3.0), the car (and hence the whole visible scene) keeps
+creeping forward across the 100 m mock path rather than driving off the
+edge of a fixed view. **Everything else (the path markers, the predicted
+trajectory) is drawn in the fixed `map` frame and would drift out of view
+the same way the car did before this fix** — camera-follow, not moving the
+world relative to the car, is what keeps the whole scene together; this is
+the deliberate, simpler choice over re-publishing the path car-relative
+every tick.
+
+### The car model
+
+RViz renders an actual car body, not just a bare axis marker, via a
+`RobotModel` display reading `/robot_description` — the go-kart's real URDF
+and STL meshes, `common/fsae_description/urdf/gocartv1.urdf.xml`, already in
+this repo for the physical vehicle description (also used by
+`fsae_description`'s own `urdf_model.launch.py`, unrelated to this bench
+rig). Its root link is literally named `base_link`, so it renders directly
+at the live tracked pose with no extra static offset needed;
+`lidar_link`/`camera_link` render as fixed children at their real mounted
+offsets. `robot_state_publisher` (a standard ROS2 package, not something
+this repo wrote) serves the URDF; every joint in it is fixed, so no
+`JointState` publisher is needed.
 
 Optional sweep overrides:
 
