@@ -157,6 +157,39 @@ class NMPCParams:
                 "embedded/Jetson hardware, see GAP E2)",
         "controller": "nmpc_only",
     })
+    nmpc_jac_gate_speed: float = field(default=8.0, metadata={
+        "unit": "m/s",
+        "desc": "below this speed (checked against the SLOWEST predicted stage "
+                "in the horizon, not the instantaneous speed, so the gate "
+                "changes rarely), _jacobians uses the full nmpc_jac_substeps. "
+                "At or above it, nmpc_jac_substeps_fast is used instead. The "
+                "jac_substeps=4 fix's own instability envelope (measured "
+                "max|A_k| vs the converged value) shows the divergence is "
+                "confined to low speed: 2.41e2 at 2.5 m/s but only 4.06 at "
+                "8 m/s and 4.01 at 14 m/s (js=1 vs converged js=4), so the "
+                "cost of the fix does not have to apply everywhere it was "
+                "needed nowhere. An analytic Jacobian would not lower this "
+                "floor either -- the variational equation shares RK4's "
+                "stability region with the nominal ODE (verified: both "
+                "diverge at the same lambda*dt), so the floor is inherent to "
+                "RK4 sensitivity propagation at low speed, not to finite "
+                "differencing. Set equal to a speed below the operating range "
+                "to disable the gate (nmpc_jac_substeps_fast is then never "
+                "read).",
+        "controller": "nmpc_only",
+    })
+    nmpc_jac_substeps_fast: int = field(default=2, metadata={
+        "unit": "substeps",
+        "desc": "nmpc_jac_substeps used at/above nmpc_jac_gate_speed. 2 tracks "
+                "the converged (4-substep) sensitivity closely with no "
+                "divergence in that speed range (measured max|A_k| 3.07 vs "
+                "3.18 at 8 m/s, 4.90 vs 4.93 at 14 m/s). 1 is NOT safe here "
+                "despite not diverging: it is inaccurate rather than unstable "
+                "at speed (1.30 vs a converged 3.85 at 10 m/s), which is a "
+                "worse SQP step direction, not a fix. Set equal to "
+                "nmpc_jac_substeps to disable the gate exactly.",
+        "controller": "nmpc_only",
+    })
 
     # ── SQP step control ────────────────────────────────────────────────
     nmpc_trust_delta_rad: float = field(default=math.radians(9.0), metadata={

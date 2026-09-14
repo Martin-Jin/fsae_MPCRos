@@ -1371,26 +1371,52 @@ class NMPCController:
         each perturbation direction costs ONE batched one-step integration of
         all N stages rather than N scalar ones (10 batched steps total).
 
-        These use nmpc_jac_substeps, which now matches the rollout's
-        nmpc_rk_substeps (both 4). It used to be deliberately coarser (1 vs 2)
-        to halve the cost of the dominant term in a Gauss-Newton iteration,
-        on the argument that A_k/B_k only supply the QP's STEP DIRECTION and
-        never the predicted trajectory, so a coarser sensitivity costs at most
-        a slightly worse step that the next iteration and the trust region
-        absorb.
+        The substep count is SPEED-GATED. A_k/B_k only supply the QP's STEP
+        DIRECTION and never the predicted trajectory, so a coarser sensitivity
+        costs at most a slightly worse step that the trust region absorbs. That
+        argument is sound about ACCURACY and wrong about STABILITY, which is
+        what bit when this was a flat 1: the (v_y, r) sub-dynamics stiffen as
+        1/v_x, so below roughly 3.5 m/s too few substeps make this integration
+        divergent rather than inaccurate, and a divergent A_k does not degrade
+        gracefully -- it compounds through the condensing loop and leaves a
+        Hessian whose only representable solution is exactly zero.
 
-        That argument is sound about ACCURACY and wrong about STABILITY, which
-        is what actually bit. The (v_y, r) sub-dynamics stiffen as 1/v_x, so
-        below roughly 3.5 m/s too few substeps make this integration
-        divergent rather than inaccurate. A divergent A_k does not degrade
-        gracefully: it compounds through the condensing loop and leaves a
-        Hessian whose only representable solution is exactly zero. Keep both
-        counts at 4 and do not re-introduce the asymmetry as a cost saving.
+        The instability is confined to LOW SPEED, so the fix does not have to
+        be. Measured max|A_k| against the converged (4-substep) value:
+
+            v_x    js=1      js=2      js=4
+            2.5    2.41e2    7.00e1    1.00
+            3.0    1.32e2    1.57e1    1.13
+            5.0    2.25e1    1.48      1.98
+            8.0    4.06      3.07      3.18
+            14.0   4.01      4.90      4.93
+            20.0   5.69      6.03      6.04
+
+        At and above ~8 m/s two substeps track the converged value closely with
+        no divergence, so nmpc_jac_substeps_fast is used there and the full
+        nmpc_jac_substeps only below the gate. js=1 is NOT a safe fast value
+        even at speed: it does not diverge, but it is badly inaccurate (1.30 vs
+        a converged 3.85 at 10 m/s).
+
+        An analytic Jacobian would NOT permit a lower count either. The
+        variational equation propagated through RK4 has the same stability
+        region as the nominal ODE (verified: both stay stable to lambda*h =
+        -2.785 and both diverge at -3.0), so the substep floor is a property of
+        RK4 sensitivity propagation, not of finite differencing.
+
+        The gate keys off the SLOWEST stage in the predicted horizon, not the
+        current speed, so it changes rarely -- a per-tick flip in Jacobian
+        fidelity would perturb the warm start and become its own disturbance.
+        Setting nmpc_jac_substeps_fast == nmpc_jac_substeps disables the gate
+        exactly.
         """
         N = self.N
         Xs = X[:N]
         p, dt = self.plant, self.dt
         n_sub = max(1, int(self.nmpc.nmpc_jac_substeps))
+        n_sub_fast = max(1, int(self.nmpc.nmpc_jac_substeps_fast))
+        if float(X[:, IDX_VX].min()) >= self.nmpc.nmpc_jac_gate_speed:
+            n_sub = min(n_sub, n_sub_fast)
         F0 = _step(Xs, U, ref, p, dt, n_sub)
         A = np.empty((N, NX, NX))
         B = np.empty((N, NX, NU))
