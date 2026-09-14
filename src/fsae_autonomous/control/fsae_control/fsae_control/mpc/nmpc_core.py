@@ -1330,13 +1330,29 @@ class NMPCController:
         iteration that cannot be vectorised across stages — hence the scalar
         _step_scalar fast path (see its docstring: 1 ms here versus 17 ms
         through the vectorised form).
+
+        nmpc_rk_substeps is SPEED-GATED per stage, same technique as
+        nmpc_jac_substeps/nmpc_jac_gate_speed (see _jacobians). Measured
+        directly (infinitesimal perturbation propagated through this same
+        rollout, not just the sensitivity Jacobian, across all 8 states and
+        several control-sequence shapes): 2 substeps diverges (up to ~260x
+        growth) across roughly 2.25-3.75 m/s, but 3 is fully converged
+        (<=1.6x growth) everywhere tested in and above that band. The fast
+        value here is nmpc_rk_substeps_fast=3, not 2, specifically because 2
+        is the one count confirmed unstable. Gated per-stage on that stage's
+        OWN predicted v_x (unlike the Jacobian's single whole-horizon gate),
+        since this function builds X incrementally and a stage's speed can
+        cross the gate mid-horizon on a hard launch/brake.
         """
         N = self.N
         X = np.empty((N + 1, NX))
         X[0] = x0
         xk = [float(v) for v in x0]
-        p, dt, n_sub = self.plant, self.dt, self.nmpc.nmpc_rk_substeps
+        p, dt = self.plant, self.dt
         for k in range(N):
+            n_sub = self.nmpc.nmpc_rk_substeps
+            if xk[IDX_VX] >= self.nmpc.nmpc_rk_gate_speed:
+                n_sub = min(n_sub, self.nmpc.nmpc_rk_substeps_fast)
             xk = _step_scalar(xk, U[k], ref, p, dt, n_sub)
             X[k + 1] = xk
         return X

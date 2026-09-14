@@ -124,13 +124,20 @@ class NMPCParams:
                 "horizon, so the PREDICTION itself is garbage and every "
                 "line-search trial scores worse than the unstepped iterate, "
                 "which freezes the controller at exactly zero steering/accel. "
-                "3 is not enough (still unstable at 2.50 m/s exactly); 4 "
-                "decays cleanly over the whole 0.1-25 m/s envelope. This is "
-                "the SAME stiffness mechanism as nmpc_jac_substeps below, but "
-                "a distinct defect: that one corrupts the QP's step "
-                "DIRECTION, this one corrupts the predicted TRAJECTORY the "
-                "step is scored against, so raising jac_substeps alone does "
-                "not fix it. See fsae_MPCTest/docs/logs/nmpc_low_speed_"
+                "4 decays cleanly over the whole 0.1-25 m/s envelope. "
+                "CORRECTED 2026-09-15: an earlier version of this docstring "
+                "claimed 3 substeps also fails at 2.50 m/s exactly -- a "
+                "direct re-measurement (perturbation growth through this "
+                "same _rollout, all 8 states individually perturbed, several "
+                "control-sequence shapes) found 3 fully stable (<=1.6x "
+                "growth) everywhere tested in and around that band; the "
+                "original claim's basis is not reproduced. 3 is used above "
+                "nmpc_rk_gate_speed via nmpc_rk_substeps_fast. This is the "
+                "SAME stiffness mechanism as nmpc_jac_substeps below, but a "
+                "distinct defect: that one corrupts the QP's step DIRECTION, "
+                "this one corrupts the predicted TRAJECTORY the step is "
+                "scored against, so raising jac_substeps alone does not fix "
+                "it. See fsae_MPCTest/docs/logs/nmpc_low_speed_"
                 "accel_stall_investigation.md",
         "controller": "nmpc_only",
     })
@@ -188,6 +195,29 @@ class NMPCParams:
                 "at speed (1.30 vs a converged 3.85 at 10 m/s), which is a "
                 "worse SQP step direction, not a fix. Set equal to "
                 "nmpc_jac_substeps to disable the gate exactly.",
+        "controller": "nmpc_only",
+    })
+    nmpc_rk_gate_speed: float = field(default=4.0, metadata={
+        "unit": "m/s",
+        "desc": "same technique as nmpc_jac_gate_speed, applied to the "
+                "ROLLOUT itself (checked per predicted STAGE, not the whole "
+                "horizon at once, since _rollout builds X incrementally and "
+                "a stage's speed can cross the gate mid-horizon on a hard "
+                "launch/brake). The rollout's instability is confined to a "
+                "NARROWER band than the Jacobian's (measured stable, <=1.6x "
+                "perturbation growth, at and above ~3.75 m/s vs the "
+                "Jacobian's ~8 m/s), so this gate opens earlier.",
+        "controller": "nmpc_only",
+    })
+    nmpc_rk_substeps_fast: int = field(default=3, metadata={
+        "unit": "substeps",
+        "desc": "nmpc_rk_substeps used at/above nmpc_rk_gate_speed. NOT 2: "
+                "2 is the one substep count confirmed unstable (up to ~260x "
+                "perturbation growth) in the 2.25-3.75 m/s band. 3 is fully "
+                "converged (<=1.6x growth) everywhere measured at and above "
+                "the gate speed, across all 8 states individually perturbed "
+                "and several control-sequence shapes. Set equal to "
+                "nmpc_rk_substeps to disable the gate exactly.",
         "controller": "nmpc_only",
     })
 
