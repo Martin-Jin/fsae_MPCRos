@@ -221,6 +221,46 @@ class NMPCParams:
         "controller": "nmpc_only",
     })
 
+    # ── Standstill steering damping ─────────────────────────────────────
+    # At v_x = 0 steering has NO physical effect (the kinematic branch gives
+    # r_kin = v_x*tan(d)/L = 0, and the dynamic branch is blended out), but
+    # the SQP's cost is summed over the WHOLE horizon, and the rolled-out
+    # v_x profile leaves zero by stage 1 ([0, 0.118, 0.294, 0.465, ...]).
+    # Nothing in the cost distinguishes "this stage cannot act yet" from
+    # "this stage will act soon", so the optimiser pre-commits U[0] toward
+    # whatever helps the later, physically-active stages. Measured live and
+    # reproduced offline: steering ramps to ~-6.8 deg over the ~1 s before
+    # the car physically moves, so it launches already turned and curves
+    # sideways until the correction catches up.
+    nmpc_standstill_steer_damp_enabled: bool = field(default=False, metadata={
+        "desc": "damp the SQP's stage-0 steering effort while the car is "
+                "measurably stationary, so it does not pre-commit a steering "
+                "angle it cannot act on and then launch already turned. Only "
+                "stage 0 is damped: the predicted v_x leaves zero by stage 1, "
+                "so every later stage can genuinely act and its planning is "
+                "left untouched, and U[0] is the only element actually "
+                "shipped to the car.",
+        "controller": "nmpc_only",
+    })
+    nmpc_standstill_speed: float = field(default=0.5, metadata={
+        "unit": "m/s",
+        "desc": "below this MEASURED speed (x0's own v_x, not a predicted "
+                "stage), stage 0's steering effort weight is scaled by "
+                "nmpc_standstill_steer_r_scale. Keyed on the measurement so "
+                "the damping disengages the moment the car actually moves.",
+        "controller": "nmpc_only",
+    })
+    nmpc_standstill_steer_r_scale: float = field(default=20.0, metadata={
+        "desc": "multiplier on r_delta for stage 0 only, while below "
+                "nmpc_standstill_speed. A weight sweep on the standstill "
+                "reproduction gives pre-load -6.71 deg at 1x, -3.45 at ~3.7x, "
+                "-1.03 at ~15x and -0.19 at ~74x, so 20x leaves a small "
+                "residual rather than pinning steering to zero. This is a "
+                "tuning value, not a derived constant: re-check it live "
+                "rather than treating it as exact.",
+        "controller": "nmpc_only",
+    })
+
     # ── SQP step control ────────────────────────────────────────────────
     nmpc_trust_delta_rad: float = field(default=math.radians(9.0), metadata={
         "unit": "rad",

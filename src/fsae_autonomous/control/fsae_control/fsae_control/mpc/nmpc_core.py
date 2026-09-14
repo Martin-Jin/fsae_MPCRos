@@ -1079,6 +1079,15 @@ class NMPCController:
         self.rrate_steer_straight = _pick(pm.nmpc_rrate_steer_straight, pm.rrate_steer_straight)
         self.rrate_steer_corner = _pick(pm.nmpc_rrate_steer_corner, pm.rrate_steer_corner)
 
+        # Standstill steering damping -- see the field docstrings in
+        # nmpc_params.py for the mechanism, and _solve_step/_cost for where
+        # the stage-0 weight is actually applied.
+        self.standstill_steer_damp_enabled = bool(
+            self.nmpc.nmpc_standstill_steer_damp_enabled)
+        self.standstill_speed = float(self.nmpc.nmpc_standstill_speed)
+        self.standstill_steer_r_scale = float(
+            self.nmpc.nmpc_standstill_steer_r_scale)
+
         # ── Continuity memory (mirrors MPCController's) ─────────────────
         self._delta_act = 0.0
         self._a_act = 0.0
@@ -1471,6 +1480,30 @@ class NMPCController:
             C[:, :, j] = (Hp - H0) / _FD_EPS_X[j]
         return H0, C
 
+    def _r_delta_stage0(self, X):
+        """
+        Stage 0's steering-effort weight for this tick: r_delta normally,
+        scaled up while the car is measurably stationary.
+
+        At v_x = 0 steering cannot move the car (r_kin = v_x*tan(d)/L = 0,
+        dynamic branch blended out), but the SQP minimises one cost summed
+        over the whole horizon, and the predicted v_x leaves zero by stage 1.
+        Nothing else in the objective distinguishes a stage that cannot act
+        from one that will act shortly, so without this the optimiser
+        pre-commits U[0] toward whatever helps the later stages and the car
+        launches already steering. Keyed on the MEASURED speed (X[0] is x0),
+        so it disengages as soon as the car actually moves.
+
+        Shared by _solve_step (which builds the QP) and _cost (which scores
+        backtracking trials) so the two cannot disagree -- scoring a
+        different objective from the one the QP minimised is exactly the
+        failure mode _cost's own _Rr_flat comment below warns about.
+        """
+        if (self.standstill_steer_damp_enabled
+                and float(X[0, IDX_VX]) < self.standstill_speed):
+            return self.r_delta * self.standstill_steer_r_scale
+        return self.r_delta
+
     def _cost(self, X, U, H, ref=None):
         """
         True (nonlinear) cost of a candidate trajectory — used only by the
@@ -1496,7 +1529,12 @@ class NMPCController:
         stage = float(np.sum(w * H[:-1] ** 2)) + float(
             self.terminal_scale * np.sum(w * H[-1] ** 2))
         a = U[:, 1]
+        # Stage 0's steering weight can differ from the rest (standstill
+        # damping) -- see _r_delta_stage0. Written as the flat term plus a
+        # stage-0 correction so the flag-off path is bit-identical to the
+        # original single-multiply expression.
         eff = float(self.r_delta * np.sum(U[:, 0] ** 2)
+                    + (self._r_delta_stage0(X) - self.r_delta) * U[0, 0] ** 2
                     + self.r_a_accel * np.sum(np.maximum(a, 0.0) ** 2)
                     + self.r_a_brake * np.sum(np.minimum(a, 0.0) ** 2))
         du = np.vstack([U[0] - self._u_prev, np.diff(U, axis=0)])
@@ -1575,6 +1613,10 @@ class NMPCController:
         # because the sign is known at linearisation time.
         ru = np.empty((N, NU))
         ru[:, 0] = self.r_delta
+        # Stage 0 only, and only while measurably stationary -- see
+        # _r_delta_stage0. _cost applies the same weight, so the line search
+        # scores the objective this QP actually minimises.
+        ru[0, 0] = self._r_delta_stage0(X)
         ru[:, 1] = np.where(U[:, 1] >= 0.0, self.r_a_accel, self.r_a_brake)
         ru_flat = ru.reshape(-1)
         u_flat = U.reshape(-1)
