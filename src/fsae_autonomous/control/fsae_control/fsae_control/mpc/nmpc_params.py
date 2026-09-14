@@ -98,7 +98,16 @@ class NMPCParams:
         "unit": "ms",
         "desc": "wall-clock budget per tick; SQP stops early (shipping the best "
                 "feasible iterate) once exceeded. Half of the 50 ms control "
-                "period, leaving the rest of the tick for the node",
+                "period, leaving the rest of the tick for the node. Checked in "
+                "two places in compute(): before starting an SQP iteration, and "
+                "before starting each backtracking line-search trial. The first "
+                "check alone is a no-op at the shipped nmpc_sqp_iters=1 (that "
+                "loop body always runs its one iteration to completion, so the "
+                "check can only ever refuse to start it); the per-backtrack "
+                "check is what actually bounds tick time in that configuration, "
+                "since each trial re-rolls out the full horizon and dominates "
+                "solve variance. Fixed 2026-09-14, see "
+                "fsae_MPCTest/docs/logs/nmpc_low_speed_accel_stall_investigation.md.",
         "controller": "nmpc_only",
     })
     nmpc_rk_substeps: int = field(default=4, metadata={
