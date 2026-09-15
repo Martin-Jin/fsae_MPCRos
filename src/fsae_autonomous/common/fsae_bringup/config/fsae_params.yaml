@@ -163,10 +163,10 @@ nmpc_controller:
     # pre-commits U[0] toward what helps later stages and the car launches
     # already turned (~-6.8 deg measured live). Faded out rather than
     # released, since a hard cutoff just relocated the excursion.
-    nmpc_standstill_steer_damp_enabled: false
+    nmpc_standstill_steer_damp_enabled: true
     nmpc_standstill_speed: 0.5
     nmpc_standstill_fade_speed: 3.0
-    nmpc_standstill_steer_r_scale: 20.0
+    nmpc_standstill_steer_r_scale: 200.0
     nmpc_trust_delta_rad: 0.15707963267948966
     nmpc_trust_a: 0.6
     nmpc_backtrack_max: 2

@@ -232,7 +232,7 @@ class NMPCParams:
     # reproduced offline: steering ramps to ~-6.8 deg over the ~1 s before
     # the car physically moves, so it launches already turned and curves
     # sideways until the correction catches up.
-    nmpc_standstill_steer_damp_enabled: bool = field(default=False, metadata={
+    nmpc_standstill_steer_damp_enabled: bool = field(default=True, metadata={
         "desc": "damp the SQP's stage-0 steering effort while the car is "
                 "measurably stationary, so it does not pre-commit a steering "
                 "angle it cannot act on and then launch already turned. Only "
@@ -262,14 +262,23 @@ class NMPCParams:
                 "or below nmpc_standstill_speed to restore a hard cutoff.",
         "controller": "nmpc_only",
     })
-    nmpc_standstill_steer_r_scale: float = field(default=20.0, metadata={
-        "desc": "multiplier on r_delta for stage 0 only, while below "
-                "nmpc_standstill_speed. A weight sweep on the standstill "
-                "reproduction gives pre-load -6.71 deg at 1x, -3.45 at ~3.7x, "
-                "-1.03 at ~15x and -0.19 at ~74x, so 20x leaves a small "
-                "residual rather than pinning steering to zero. This is a "
-                "tuning value, not a derived constant: re-check it live "
-                "rather than treating it as exact.",
+    nmpc_standstill_steer_r_scale: float = field(default=200.0, metadata={
+        "desc": "multiplier on r_delta for stage 0 only, tapering to 1x by "
+                "nmpc_standstill_fade_speed. A weight sweep on the "
+                "standstill reproduction gives a stage-0 pre-load of -6.71 "
+                "deg at 1x, -2.41 at 20x, -1.18 at 50x, -0.63 at 100x and "
+                "-0.33 at 200x, halving roughly per doubling with no effect "
+                "on the accel command at any scale. 200x pins the pre-load "
+                "to a few tenths of a degree while staying short of the very "
+                "stiff end, where stage 0 becomes a de-facto hard constraint. "
+                "Live-validated 2026-09-15 on comp_test_map_3: peak steering "
+                "through the 0.5-3.0 m/s band 10.68 -> 6.79 deg, mean "
+                "per-tick steering change 1.77 -> 1.00 deg/tick, launch max "
+                "|e_y| 0.490 -> 0.387 m, whole-run reversals 5.78 -> 3.82 "
+                "percent. It does NOT fix the launch yaw excursion (11.42 -> "
+                "11.12 deg, unchanged within noise) -- that has a separate "
+                "cause in the speed-target ramp. A tuning value, not a "
+                "derived constant.",
         "controller": "nmpc_only",
     })
 
