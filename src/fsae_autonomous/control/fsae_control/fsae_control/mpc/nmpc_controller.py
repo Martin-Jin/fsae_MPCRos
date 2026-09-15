@@ -98,6 +98,29 @@ PATH_TIMEOUT         = 0.5    # s — reset the NMPC if no fresh trajectory with
 # if either changes. Decreases are never rate-limited; delaying a genuine
 # brake request is the failure this is meant to prevent.
 SPEED_TARGET_RISE_RATE = 7.0
+
+# Max speed error (m/s) the rise limiter is allowed to open up before it stops
+# ramping and waits for the car. Mirrors sim/rollout_core.py's constant of the
+# same name — keep in sync.
+#
+# SPEED_TARGET_RISE_RATE alone assumes the car can accelerate at that rate. From
+# a standing start it cannot: the car does not break static friction for ~1 s,
+# so the target ramps to ~7 m/s while the car is still stationary and banks a
+# deficit it spends the next second chasing. The NMPC minimises one scalar cost
+# over the horizon, so a speed error that large swamps the lateral term and the
+# optimiser trades e_y away for speed it was never going to get — measured live
+# as a sideways excursion at launch that self-corrects once the car is rolling.
+#
+# Capping the DEFICIT rather than gating on measured speed is deliberate. A gate
+# of the form "hold the target while v_actual is near zero" deadlocks: no target
+# means no speed error, which means no throttle, which means the car never moves
+# and the gate never opens. Holding at v_actual + DEFICIT_MAX always leaves a
+# real speed error, so throttle still commands and the launch still happens; the
+# ramp resumes by itself as the car closes the gap.
+#
+# Not specific to launch: the same rule stops the target running away after a
+# spin or a heavy brake, for the same reason.
+SPEED_TARGET_DEFICIT_MAX = 2.5
 # Max rate (gate-units/s) at which tracking_error_speed_gate()'s output may
 # change per tick, in EITHER direction — see control_utils' own docstring.
 GATE_RATE_LIMIT = 2.0
@@ -548,6 +571,15 @@ class NMPCControllerNode(Node):
         if self._v_des_prev is None:
             self._v_des_prev = car_speed
         desired_speed = min(desired_speed, self._v_des_prev + SPEED_TARGET_RISE_RATE / CONTROL_HZ)
+        # Stop ramping once the target has run this far ahead of the car; see
+        # SPEED_TARGET_DEFICIT_MAX. Never DROPS the target (max against the
+        # previous value), so a car that is merely slow does not get the target
+        # dragged down to meet it, and a genuine brake request still passes
+        # through the min() above untouched.
+        if desired_speed - car_speed > SPEED_TARGET_DEFICIT_MAX:
+            desired_speed = min(desired_speed,
+                                max(self._v_des_prev,
+                                    car_speed + SPEED_TARGET_DEFICIT_MAX))
         self._v_des_prev = desired_speed
 
         # GAP A4: pose_age_s measures age since ARRIVAL, not since capture —
