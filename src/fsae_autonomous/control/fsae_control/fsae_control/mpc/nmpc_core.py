@@ -1085,6 +1085,7 @@ class NMPCController:
         self.standstill_steer_damp_enabled = bool(
             self.nmpc.nmpc_standstill_steer_damp_enabled)
         self.standstill_speed = float(self.nmpc.nmpc_standstill_speed)
+        self.standstill_fade_speed = float(self.nmpc.nmpc_standstill_fade_speed)
         self.standstill_steer_r_scale = float(
             self.nmpc.nmpc_standstill_steer_r_scale)
 
@@ -1483,7 +1484,8 @@ class NMPCController:
     def _r_delta_stage0(self, X):
         """
         Stage 0's steering-effort weight for this tick: r_delta normally,
-        scaled up while the car is measurably stationary.
+        scaled up while the car is slow, FADED OUT over a speed band rather
+        than switched off at a threshold.
 
         At v_x = 0 steering cannot move the car (r_kin = v_x*tan(d)/L = 0,
         dynamic branch blended out), but the SQP minimises one cost summed
@@ -1492,17 +1494,36 @@ class NMPCController:
         from one that will act shortly, so without this the optimiser
         pre-commits U[0] toward whatever helps the later stages and the car
         launches already steering. Keyed on the MEASURED speed (X[0] is x0),
-        so it disengages as soon as the car actually moves.
+        never a predicted one.
+
+        The multiplier is held at nmpc_standstill_steer_r_scale below
+        nmpc_standstill_speed, then ramped linearly to 1.0 (no damping) at
+        nmpc_standstill_fade_speed. A hard release instead of a fade puts the
+        full weight change into a single tick exactly when the car is most
+        sensitive: measured live, steering ran from -1.8 to -12.9 deg over
+        the six ticks immediately after the release, roughly -2 deg/tick
+        sustained, which is the launch excursion this damping exists to
+        prevent, reappearing a moment later. Setting fade_speed <= speed
+        restores the old hard cutoff.
 
         Shared by _solve_step (which builds the QP) and _cost (which scores
         backtracking trials) so the two cannot disagree -- scoring a
         different objective from the one the QP minimised is exactly the
         failure mode _cost's own _Rr_flat comment below warns about.
         """
-        if (self.standstill_steer_damp_enabled
-                and float(X[0, IDX_VX]) < self.standstill_speed):
-            return self.r_delta * self.standstill_steer_r_scale
-        return self.r_delta
+        if not self.standstill_steer_damp_enabled:
+            return self.r_delta
+        v = float(X[0, IDX_VX])
+        lo, hi = self.standstill_speed, self.standstill_fade_speed
+        if v <= lo:
+            scale = self.standstill_steer_r_scale
+        elif v >= hi or hi <= lo:
+            scale = 1.0
+        else:
+            frac = (v - lo) / (hi - lo)
+            scale = self.standstill_steer_r_scale + (
+                1.0 - self.standstill_steer_r_scale) * frac
+        return self.r_delta * scale
 
     def _cost(self, X, U, H, ref=None):
         """

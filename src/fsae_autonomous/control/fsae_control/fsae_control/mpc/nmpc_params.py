@@ -250,6 +250,18 @@ class NMPCParams:
                 "the damping disengages the moment the car actually moves.",
         "controller": "nmpc_only",
     })
+    nmpc_standstill_fade_speed: float = field(default=3.0, metadata={
+        "unit": "m/s",
+        "desc": "speed at which the standstill damping has faded fully back "
+                "to 1x. The multiplier is held at its full value below "
+                "nmpc_standstill_speed and ramped linearly to 1.0 here, so "
+                "the weight never changes in one step. A hard release put "
+                "the whole change into a single tick right where the car is "
+                "most sensitive: measured live, steering ran -1.8 to -12.9 "
+                "deg over the six ticks straight after the release. Set at "
+                "or below nmpc_standstill_speed to restore a hard cutoff.",
+        "controller": "nmpc_only",
+    })
     nmpc_standstill_steer_r_scale: float = field(default=20.0, metadata={
         "desc": "multiplier on r_delta for stage 0 only, while below "
                 "nmpc_standstill_speed. A weight sweep on the standstill "
