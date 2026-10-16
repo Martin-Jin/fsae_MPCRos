@@ -1098,6 +1098,9 @@ class NMPCController:
         self._U = np.zeros((self.N, NU))     # warm-start input trajectory
         self._have_warm_start = False
         self._u_history: list[np.ndarray] = []
+        # Actuator states just before each _u_history entry was applied,
+        # row-aligned with it (see the delay rollforward in compute()).
+        self._act_history: list[np.ndarray] = []
         self._pose_age_filtered: float | None = None
         self._n_delay = 0
 
@@ -1187,6 +1190,7 @@ class NMPCController:
         self._U = np.zeros((self.N, NU))
         self._have_warm_start = False
         self._u_history.clear()
+        self._act_history.clear()
         self._pose_age_filtered = None
         self._n_delay = 0
 
@@ -1924,8 +1928,19 @@ class NMPCController:
         if self.params.delay_compensation_enabled:
             n_delay = self._update_n_delay(pose_age_s)
             if n_delay > 0 and self._u_history:
+                pending = self._u_history[-n_delay:]
+                # x0's actuator states are the estimate for NOW, but the pose
+                # is n_delay ticks old and the pending commands are the ones
+                # issued since. Start the actuator states from where they
+                # stood when the oldest pending command was issued, so the
+                # rollforward brings them back to now instead of n_delay
+                # ticks past it (which would also drive the lateral states
+                # with a too-advanced steering angle).
+                if len(self._act_history) >= len(pending):
+                    x0 = x0.copy()
+                    x0[IDX_DELTA:IDX_A + 1] = self._act_history[-len(pending)]
                 xk = [float(v) for v in x0]
-                for u_hist in self._u_history[-n_delay:]:
+                for u_hist in pending:
                     xk = _step_scalar(xk, u_hist, ref, self.plant, self.dt,
                                       self.nmpc.nmpc_rk_substeps)
                 x0 = np.array(xk)
@@ -1956,6 +1971,11 @@ class NMPCController:
             self._Rr_flat = self._Rr_flat * np.tile(
                 np.array([m_rrate_zone, 1.0]), self.N)
             self._ErE = self._E.T @ (self._Rr_flat[:, None] * self._E)
+            # Keep the logged Rrate_steer_corner_blend the weight the QP
+            # actually uses: the zone factor multiplies it after the
+            # composition above.
+            rrate_steer_current *= m_rrate_zone
+
         H = _outputs(X, ref, self.plant, v_ref,
                      horizon_speed_profile_enabled=self.horizon_speed_profile_enabled,
                      friction_circle_enabled=self.friction_circle_enabled)
@@ -2016,8 +2036,10 @@ class NMPCController:
         u_opt = np.clip(U[0], self.u_min, self.u_max)
         u_opt = np.clip(u_opt, self._u_prev - self.du_max, self._u_prev + self.du_max)
         self._u_history.append(u_opt.copy())
+        self._act_history.append(np.array([self._delta_act, self._a_act]))
         if len(self._u_history) > self.params.max_delay_compensation_steps:
             del self._u_history[:-self.params.max_delay_compensation_steps]
+            del self._act_history[:-self.params.max_delay_compensation_steps]
 
         exp_delta = math.exp(-self.dt / self.plant.tau_delta)
         exp_a = math.exp(-self.dt / self.plant.tau_a)
