@@ -33,6 +33,10 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(os.path.join(launch_dir, name)), **kwargs)
 
     run_slam = IfCondition(PythonExpression(["'", planner, "' != 'fasttube_without_kalman'"]))
+    # With SLAM up, it publishes the corrected car pose; the camera's raw copy goes quiet so
+    # /fsae/slam/car_position keeps a single publisher.
+    camera_pose = PythonExpression(
+        ["'false' if '", planner, "' != 'fasttube_without_kalman' else 'true'"])
 
     return LaunchDescription([
         DeclareLaunchArgument('planner', default_value='fasttube'),
@@ -46,7 +50,8 @@ def generate_launch_description():
             'nmpc_publish_telemetry_enabled', default_value=use_gui),
 
         include('description.launch.py'),
-        include('perception.launch.py'),
+        include('perception.launch.py',
+                launch_arguments={'publish_car_position': camera_pose}.items()),
         include('slam.launch.py', condition=run_slam),
         include('planning.launch.py', launch_arguments={'planner': planner}.items()),
         include('control.launch.py', launch_arguments={

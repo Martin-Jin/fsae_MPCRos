@@ -14,7 +14,6 @@ scipy>=1.11
 
 # fsd-path-planning is NOT on PyPI - install from GitHub (FaSTTUBe). Needs Python >=3.9.
 git+https://github.com/papalotis/ft-fsd-path-planning.git   # planning/fsae_planning - fasttube & fasttube_without_kalman planners
-kdtree                 # perception/fsae_slam   - cone_mapper landmark KD-tree
 pyPS4Controller        # control/fsae_can_bridge - joystick_teleop
 spidev                 # control/fsae_can_bridge - MCP2515 CAN driver (Jetson SPI)
 pyserial               # control/fsae_can_bridge - CANdapter USB-serial bridge (candapter_node); also rosdep 'python3-serial'

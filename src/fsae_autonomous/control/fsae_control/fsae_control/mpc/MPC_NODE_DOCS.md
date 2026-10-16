@@ -59,7 +59,8 @@ launch behaviour changes.
 |---|---|---|---|
 | `/fsae/planning/selected_trajectory` | `geometry_msgs/PoseArray` | **Required** | The planner's centreline. Must have ≥2 points and be refreshed at least every `PATH_TIMEOUT` (0.5 s), or the node safe-stops. |
 | `/fsae/slam/car_position` | `geometry_msgs/Pose` | **Required** | `x`, `y` in `.position`; **yaw in radians is stuffed into `.orientation.w`** (repo convention, not a real quaternion — see gap A5). No solve happens until at least one message arrives. |
-| `/fsae/slam/car_odom` | `nav_msgs/Odometry` | Optional (placeholder) | No publisher exists in this repo yet. Preferred source for `v_x`/`v_y`/yaw rate when present — see gaps A1/A2/A3/A7. |
+| `odom_topic` param, default `/fsae/slam/car_odom` | `nav_msgs/Odometry` | Optional | The default topic has no publisher (gaps A1/A2/A3/A7). Preferred `v_x`/`v_y`/yaw-rate source while under `state_timeout_s` (0.3 s) old. `odom_velocity_source: twist` reads the twist; `pose_diff` differentiates the stamped pose instead. The kart launch uses `/zed/zed_node/odom` with `pose_diff`. |
+| `imu_topic` param, default `''` (off) | `sensor_msgs/Imu` | Optional | When set and fresh, `angular_velocity.z` (× `imu_yaw_rate_sign`) is the yaw rate, ahead of every other source. The kart launch uses `/zed/zed_node/imu/data`. |
 | `/fsae/hardware/curr_vel` | `ackermann_msgs/AckermannDriveStamped` | Optional (placeholder) | 2nd-choice `v_x` source; this topic already exists in the repo's naming convention but nothing publishes it yet. |
 | `/fsae/hardware/drive_status` | `ackermann_msgs/AckermannDriveStamped` | Optional | 3rd-choice `v_x` source, from `can_decoder`'s 1 m/s-resolution CAN byte. |
 | `/fsae/perception/cone_detection` | `fsae_interfaces/ConeDetection` | Optional | Proximity emergency-brake input, car-local frame. Empty/absent just makes the brake a no-op. |
@@ -72,7 +73,7 @@ speed — open-loop, degrades gracefully, does not block the node from running.
 
 | Topic | Type | Notes |
 |---|---|---|
-| `/fsae/control/cmd_vel` | `ackermann_msgs/AckermannDriveStamped` | The actual command: speed (m/s) + steering (deg). Consumed by `ack_to_can`. |
+| `cmd_topic` param, default `/fsae/control/cmd_vel` | `ackermann_msgs/AckermannDriveStamped` | The actual command: speed (m/s) + steering (deg). Consumed by `ack_to_can` on the default topic. `header.frame_id` is `nmpc_safe_stop` on a safe-stop command, `nmpc_controller` otherwise. The kart launch publishes on `/fsae/control/nmpc_cmd`, read by `joystick_teleop`'s NMPC steering mode. |
 | `/fsae/control/accel_cmd` | `ackermann_msgs/AckermannDriveStamped` | Placeholder (gap B1) — the NMPC's raw signed acceleration in `.drive.acceleration`. Nothing consumes this yet; it exists so the value isn't silently discarded. |
 | `/fsae/viz/nmpc_prediction_raw` | `geometry_msgs/PoseArray` | RViz visualization only, gated by `nmpc_publish_prediction_enabled` (default off, see below). `"map"`-frame Cartesian conversion of the predicted horizon. |
 | `/fsae/viz/nmpc_telemetry` | `std_msgs/String` (JSON) | `nmpc_telemetry_gui.py` only, gated by `nmpc_publish_telemetry_enabled` (default off). `last_telemetry`'s ~30 fields plus `vx_source`/`car_x`/`car_y`/`car_yaw` — see "Live telemetry GUI" below. |
@@ -100,6 +101,19 @@ To drive against a precomputed CSV path instead of the live planner topic:
 ```bash
 ros2 launch fsae_bringup control.launch.py controller:=nmpc path_map_path:=/path/to/raceline.csv
 ```
+
+### On the go-kart (steering only)
+
+```bash
+ros2 launch fsae_bringup nmpc_gokart.launch.py
+```
+
+The NMPC steers while the driver holds X + R1, and the triggers keep throttle and brake.
+It sets the kart's geometry through the node's `plant_*` parameters (`plant_lf` 0.86,
+`plant_lr` 0.14, kinematic below 8 m/s), which `NMPCController(plant_overrides=...)`
+applies over the FSDS defaults. See
+[`docs/NMPC_GOKART_GROUND_TEST.md`](../../../../docs/NMPC_GOKART_GROUND_TEST.md) for
+controls, measurements and the bring-up checklist.
 
 ## Visualizing the predicted trajectory in RViz
 

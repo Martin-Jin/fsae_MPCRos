@@ -17,6 +17,15 @@ full `fsae_autonomous` workspace (e.g. this repo's
 `src/fsae_autonomous/control/fsae_control/...` is that workspace's
 `control/fsae_control/...`), so a diff against that workspace is direct.
 
+## Branch `mpc-ground-test`: go-kart steering-only test
+
+This branch mirrors `fsae_autonomous`'s `mpc-ground-test` branch, which is the NMPC port
+rebased onto `feat/teleop-node-ground-testing` plus a steering-only go-kart launch
+(`nmpc_gokart.launch.py`). Shared files such as `fsae_params.yaml` and
+`autonomous.launch.py` are that branch's versions, so they differ from `main` here.
+It also carries `control/fsae_can_bridge/fsae_can_bridge/joystick_teleop.py`, which gains
+the NMPC steering mode. See `src/fsae_autonomous/docs/NMPC_GOKART_GROUND_TEST.md`.
+
 ## Status: replaces an earlier, different port in this repo's history
 
 An earlier version of this repo (see `git log`) contained a **different**

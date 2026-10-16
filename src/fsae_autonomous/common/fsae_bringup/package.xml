@@ -20,6 +20,10 @@
   <exec_depend>fsae_visualization</exec_depend>
   <exec_depend>fsae_description</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
+  <!-- teleop.launch.py and nmpc_gokart.launch.py (kart serial path, pad, RViz) -->
+  <exec_depend>fsae_serial_bridge</exec_depend>
+  <exec_depend>joy</exec_depend>
+  <exec_depend>rviz2</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

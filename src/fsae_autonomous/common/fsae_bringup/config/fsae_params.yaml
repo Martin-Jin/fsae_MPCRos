@@ -54,6 +54,24 @@ nmpc_controller:
     map_path: ""                 # '' -> live curvature_speed(); GAP C2 -- no track CSV exists in this repo yet
     path_map_path: ""            # '' -> live /fsae/planning/selected_trajectory; GAP C2
     use_precomputed_heading_profile: false   # no effect on the NMPC (accepted, ignored -- see nmpc_core.py)
+    # State inputs and output topic. These defaults keep the original contract;
+    # nmpc_gokart.launch.py overrides them for the kart (ZED odom + IMU in, nmpc_cmd out).
+    odom_topic: "/fsae/slam/car_odom"   # no publisher (GAP A1-A3)
+    odom_velocity_source: "twist"       # twist | pose_diff (differentiate the stamped pose)
+    odom_diff_lp: 0.5
+    use_measured_vy: true
+    imu_topic: ""                       # '' = off; e.g. /zed/zed_node/imu/data
+    imu_yaw_rate_sign: 1.0
+    state_timeout_s: 0.3                # odom/IMU older than this is ignored
+    cmd_topic: "/fsae/control/cmd_vel"
+    # Vehicle model overrides; -1.0 keeps nmpc_core._Plant's FSDS value. The kart's
+    # values are set in nmpc_gokart.launch.py (lf 0.86, lr 0.14, kinematic below 8 m/s).
+    plant_lf: -1.0
+    plant_lr: -1.0
+    plant_v_blend_lo: -1.0
+    plant_v_blend_hi: -1.0
+    plant_tau_delta: -1.0
+    plant_max_steer_deg: -1.0
 
     # --- MPCParams: base Q/R/R_rate weights (also read by the NMPC via nmpc_* overrides below) ---
     q_e_y: 6.35
@@ -229,53 +247,72 @@ candapter_node:               # CAN hardware bridge (ported from CanTalk). Jetso
     baud_rate: 250              # CAN bitrate in kbit/s (-> 'S5'); NOT the USB serial line speed
 autonomous_sys_status:
   ros__parameters: {}           # no tunables yet
-# Gamepad teleop (minimal): steer, throttle, brake, L1 e-stop. Reads the stock `joy` node's
+# Gamepad teleop (minimal): steer, throttle, brake, X deadman. Reads the stock `joy` node's
 # /joy topic, so it is controller-agnostic - an Xbox pad and a PS4 pad differ only in the
 # axis/button INDICES below. To retarget a pad, run `ros2 topic echo /joy`, move one control
-# at a time, and write the indices you see. Publishes cmd_vel (CAN/MoTeC, the live path);
-# actuator_cmd (serial/Arduino) is DISABLED by default, see actuator_cmd_enabled below.
+# at a time, and write the indices you see. Publishes cmd_vel (CAN/MoTeC) and, with
+# actuator_cmd_enabled below (ON), actuator_cmd (serial/Arduino).
 joystick_teleop:
   ros__parameters:
     max_speed: 2.0              # m/s (cmd_vel path). ack_to_can int()-truncates speed,
                                 # so values below 1.0 send 0 over CAN.
     max_angle: 180.0            # degrees; NB ack_to_can (CAN path only) still rejects frames beyond +/-30
-    max_throttle_percent: 50.0  # actuator_cmd path (DISABLED) - full trigger travel = 50% throttle
+    max_throttle_percent: 20.0  # actuator_cmd path (Arduino) - full trigger travel = 20% throttle
     max_brake_percent: 100.0
     max_steer_rate: 0.0          # deg/s steering slew limit; 0 = off (raw stick). Caps how fast
                                 # the commanded angle can move. Try ~90 to feel it, tune to taste.
-    # DISABLED: publishes /fsae/control/actuator_cmd for fsae_serial_bridge (Arduino bench
-    # rig). We're back on MoTeC/CAN (cmd_vel above), so this stays off. Left wired rather
-    # than deleted in case the bench rig comes back.
-    actuator_cmd_enabled: false
+    # ENABLED (2026-09-19, Arduino bench rig is back): publishes /fsae/control/actuator_cmd
+    # for fsae_serial_bridge. cmd_vel is still published regardless, so the CAN path is
+    # unaffected - set false to go back to MoTeC-only.
+    actuator_cmd_enabled: true
     # --- controller map ---
     # VERIFIED on a PS4 (Sony Wireless Controller) via `ros2 topic echo /joy`, 2026-07-25.
     # NB the PS4 trigger axes are 3/4, NOT the Xbox 2/5 - retarget with /joy on a new pad.
     axis_steer: 0               # left stick X  (PS4 L3-X; +1.0 = full LEFT, matches ROS sign)
     axis_throttle: 4            # right trigger (PS4 R2; rest +1.0 -> full -1.0)
     axis_brake: 3               # left trigger  (PS4 L2; rest +1.0 -> full -1.0)
-    button_estop: 4             # shoulder      (PS4 L1), HELD = all outputs 0. -1 disables.
+    # DEADMAN - MEASURED on this pad via /joy, 2026-09-19: X (Cross) = button 1.
+    # HELD = drive. Released = neutral frames (S0 T0 B0, kart coasts, ECU stays live).
+    # Pad lost = no frames, so the ECU's watchdog trips its failsafe (HV cut, brake on).
+    # To go live on the ECU: hold X and the brake, sticks centred, for 3 s, then let go of
+    # the brake.
+    # -1 disables the deadman entirely - DANGEROUS with a motor connected.
+    # NB the old L1 e-stop binding (button 4) was removed: X is now the only stop control.
+    button_arm: 1
+    # NMPC steering mode (hold X + this button: the NMPC steers, triggers keep throttle and
+    # brake). Off here; nmpc_gokart.launch.py turns it on (topic /fsae/control/nmpc_cmd,
+    # button 5 = R1, which is the hid-sony index - check with `ros2 topic echo /joy`).
+    auto_steer_topic: ""
+    button_auto_steer: -1
+    auto_steer_timeout: 0.3     # s; older NMPC command -> steering 0, throttle 0
+    auto_steer_scale: 1.0       # actuator deg per NMPC road-wheel deg; NOT calibrated yet
     # --- axis conditioning ---
-    invert_steer: false         # +ve steering_angle = LEFT (ROS convention)
+    invert_steer: true          # +ve steering_angle = LEFT (ROS convention). MEASURED inverted
+                                # on this pad/rig 2026-09-19 - was false, stick was backwards.
     steer_deadzone: 0.05        # ignore stick centre drift
     trigger_rest: 1.0           # axis value with the trigger released (verify on a new pad)
     trigger_full: -1.0          # axis value with the trigger pressed flat
     # --- timing ---
     publish_rate: 50.0          # Hz; commands go out on a timer, not per Joy callback
-    joy_timeout: 0.25           # s of /joy silence before outputs go to 0 (pad dropout)
+    joy_timeout: 0.25           # s of /joy silence before the pad counts as lost (ECU failsafe)
 
-# --- control/fsae_serial_bridge (bench-rig hub Arduino) --- DISABLED / not launched ---
-# We're back on MoTeC (CAN path, candapter_node), so this bridge and everything upstream
-# that feeds it (fixed_throttle_percent/actuator_cmd_enabled above, joystick_teleop's
-# actuator_cmd_enabled) are switched off. Left in place, not deleted, in case the Arduino
-# bench rig comes back.
+# --- control/fsae_serial_bridge (bench-rig hub Arduino) --- ACTIVE ---
+# Launched by teleop.launch.py with bench_rig:=true (the default). joystick_teleop's
+# actuator_cmd_enabled above is ON, so the PS4 pad feeds this bridge. The stanley_controller
+# actuator_cmd path (autonomous) is still off - flip its actuator_cmd_enabled and set a
+# non-zero fixed_throttle_percent when the rig is ready to drive itself.
 serial_bridge:
   ros__parameters:
-    # Hub Arduino is a CH340-based clone -> enumerates as /dev/ttyUSB*, NOT /dev/ttyACM*
-    # (ACM is only for native-USB boards: Leonardo/Micro/genuine Uno R3+). Using the stable
-    # by-id symlink so it does not depend on ttyUSB enumeration order (candapter_node also
-    # claims /dev/ttyUSB0 - the two are mutually exclusive at runtime, but this disambiguates).
-    port: "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"
+    # MEASURED on the Jetson 2026-09-19: the hub Arduino on this rig is FTDI FT232R-based
+    # (0403:6001, serial A5069RR4) -> /dev/ttyUSB0, NOT the CH340 (1a86) the old comment here
+    # claimed. That matters: this kernel (5.15.199-tegra) ships no ch341 driver at all, so a
+    # CH340 board would not enumerate. Using the stable by-id symlink - it pins this exact
+    # adapter by serial, so it survives ttyUSB reordering and cannot land on the CANdapter
+    # (also FTDI) if both are ever plugged in at once.
+    port: "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A5069RR4-if00-port0"
     baud_rate: 115200           # USB serial line speed; matches the Arduino sketches
+    # No e-stop or timeout settings: the bridge only sends S/T/B frames. If they stop, the
+    # ECU's own 200 ms watchdog trips its failsafe.
 
 # --- perception/fsae_camera (ZED cone detection; node name 'cone_detection_node') ---
 cone_detection_node:
@@ -316,6 +353,9 @@ cone_detection_node:
     depth_topic: "/zed/zed_node/depth/depth_registered"
     camera_info_topic: "/zed/zed_node/rgb/color/rect/camera_info"
     pose_topic: "/zed/zed_node/pose"
+    # Raw ZED pose on /fsae/slam/car_position. autonomous.launch.py overrides this to false
+    # whenever SLAM runs, because cone_landmark_mapper then publishes the corrected pose.
+    publish_car_position: true
 
 # --- perception: zed_ros2_wrapper SDK overrides (the wrapper's own node) ---
 # Passed to the wrapper via its `ros_params_override_path` launch arg (see
@@ -370,16 +410,11 @@ cone_detection_node:
       publish_map_tf: false
       area_memory: false
 
-# --- perception/fsae_slam (cone_mapper - Python KF landmark mapper) ---
-cone_mapper:
+# --- perception/fsae_slam (cone_landmark_mapper - iSAM2 cone landmark SLAM) ---
+# Estimator defaults live in the node (cone_landmark_mapper.cpp); only rig values here.
+cone_landmark_mapper:
   ros__parameters:
-    default_error_in_estimate: 4.0   # initial KF estimate error
-    error_in_measurement: 2.5        # KF measurement error
-    match_radius: 1.0                # m, nearest-landmark match radius
-    remove_point_counter: 200        # frames between low-confidence prunes
-    times_modified_limit: 100        # min confidence to survive a prune
-    modify_rate: 1.08                # confidence growth per match
-    reset_count: 60                  # frames between full map resets
+    lidar_yaw_offset_deg: 0.0        # camera-LiDAR mount yaw. Trolley (run4) = -1.66; kart not yet measured
     invert_cones: false              # swap blue<->yellow track assignment
 
 # --- planning/fsae_mission_control (ported from scrutineering) ---

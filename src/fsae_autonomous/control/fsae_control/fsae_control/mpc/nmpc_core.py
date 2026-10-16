@@ -96,7 +96,7 @@ exactly)
 
 import math
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 import scipy.sparse as sp
@@ -439,6 +439,10 @@ class _Plant:
     here so this module is self-contained but MUST be kept in sync with that
     constructor (and, per CLAUDE.md, with vehicle_physics.VehicleParams) if the
     plant is ever re-identified. These are NOT independent tunables.
+
+    A different vehicle (the go-kart) replaces fields through
+    NMPCController's `plant_overrides`, which the ROS node fills from its
+    `plant_*` parameters. The defaults here stay the FSDS car's.
     """
     lf: float = 0.70
     lr: float = 0.85
@@ -941,6 +945,8 @@ class NMPCController:
         params: MPCParams | None = None,
         nmpc: NMPCParams | None = None,
         logger=None,
+        plant_overrides: dict | None = None,
+        max_steer_rad: float | None = None,
     ) -> None:
         """
         dt must equal the calling node's control period (0.05 s), as for
@@ -949,6 +955,13 @@ class NMPCController:
         comparing the two); an explicit N overrides it. `logger` is an optional
         rclpy logger for the one-time informational messages; print() is used
         when it is None so this module stays importable/testable outside ROS.
+
+        `plant_overrides` replaces named _Plant fields (e.g. lf, lr,
+        v_blend_lo, v_blend_hi) for a vehicle other than the FSDS car, and
+        `max_steer_rad` replaces control_limits.MAX_STEER_RAD as the steering
+        bound. Both default to the FSDS values, so the sim tree's behaviour
+        is unchanged when they are omitted. An unknown _Plant field name
+        raises TypeError rather than being ignored.
         """
         if osqp is None:      # pragma: no cover - dependency guard
             raise ImportError(
@@ -975,7 +988,13 @@ class NMPCController:
         # precedent this class already follows for lf/lr/m/Iz/Cf/Cr. Only
         # nmpc_alat_ceiling_enabled (a genuine NMPC-only on/off switch, not a
         # shared plant constant) still comes from NMPCParams.
-        self.plant = _Plant(alat_ceiling_enabled=bool(nm0.nmpc_alat_ceiling_enabled))
+        self.plant = replace(
+            _Plant(alat_ceiling_enabled=bool(nm0.nmpc_alat_ceiling_enabled)),
+            **(plant_overrides or {}))
+        if not self.plant.v_blend_hi > self.plant.v_blend_lo:
+            raise ValueError('plant v_blend_hi must exceed v_blend_lo '
+                             f'(got {self.plant.v_blend_lo}, {self.plant.v_blend_hi})')
+        self.max_steer_rad = float(MAX_STEER_RAD if max_steer_rad is None else max_steer_rad)
         # Convenience aliases so telemetry/geometry code reads like mpc_core's.
         self.lf, self.lr = self.plant.lf, self.plant.lr
 
@@ -1002,8 +1021,8 @@ class NMPCController:
         # ── Limits: identical to MPCController's ────────────────────────
         self.a_max = MAX_ACCEL
         self.a_max_brake = MAX_BRAKE
-        self.u_min = np.array([-MAX_STEER_RAD, -self.a_max_brake])
-        self.u_max = np.array([MAX_STEER_RAD, self.a_max])
+        self.u_min = np.array([-self.max_steer_rad, -self.a_max_brake])
+        self.u_max = np.array([self.max_steer_rad, self.a_max])
         # 180 deg/s * dt, matching MPCController's du_max exactly (see that
         # constructor's long note on why it is 180 and not 190).
         self.du_max = np.array([math.radians(180.0) * self.dt, 0.6])
@@ -2048,9 +2067,9 @@ class NMPCController:
         self._u_prev2 = self._u_prev.copy()
         self._u_prev = u_opt.copy()
 
-        delta_cmd = float(np.clip(u_opt[0], -MAX_STEER_RAD, MAX_STEER_RAD))
+        delta_cmd = float(np.clip(u_opt[0], -self.max_steer_rad, self.max_steer_rad))
         a_cmd = float(u_opt[1])
-        steering = float(np.clip(-delta_cmd / MAX_STEER_RAD, -1.0, 1.0))
+        steering = float(np.clip(-delta_cmd / self.max_steer_rad, -1.0, 1.0))
         if a_cmd >= 0.0:
             throttle = float(np.clip(a_cmd / self.a_max, 0.0, 1.0))
             brake = 0.0

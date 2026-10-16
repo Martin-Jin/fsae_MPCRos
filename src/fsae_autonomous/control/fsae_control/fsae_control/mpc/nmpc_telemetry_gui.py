@@ -65,6 +65,7 @@ _CAR_TRIANGLE = np.array([[0.6, 0.0], [-0.4, 0.3], [-0.4, -0.3]])
 
 _VX_SOURCE_COLOR = {
     'car_odom': 'tab:green',
+    'car_odom+imu': 'tab:green',
     'curr_vel': 'tab:orange',
     'drive_status': 'tab:orange',
 }

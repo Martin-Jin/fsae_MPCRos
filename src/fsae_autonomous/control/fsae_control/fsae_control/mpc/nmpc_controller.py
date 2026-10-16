@@ -14,9 +14,16 @@ does not re-explain each gap.
     in   /fsae/slam/car_position             geometry_msgs/Pose             x,y in position; yaw in orientation.w
                                                                              (repo convention; NOT independently
                                                                              timestamped -- see GAP A4)
-    in   /fsae/slam/car_odom                 nav_msgs/Odometry              PLACEHOLDER, GAP A1/A2/A3/A7 --
-                                                                             no publisher exists yet; preferred
-                                                                             v_x/v_y/yaw_rate source when present
+    in   <odom_topic>                        nav_msgs/Odometry              default /fsae/slam/car_odom (no
+                                                                             publisher, GAP A1/A2/A3/A7). The kart
+                                                                             launch points it at /zed/zed_node/odom.
+                                                                             Preferred v_x/v_y/yaw_rate source while
+                                                                             fresh (state_timeout_s); read from the
+                                                                             twist, or differentiated from the
+                                                                             stamped pose (odom_velocity_source)
+    in   <imu_topic>                         sensor_msgs/Imu                default '' (off). When set, its
+                                                                             angular_velocity.z replaces every
+                                                                             other yaw-rate source while fresh
     in   /fsae/hardware/curr_vel             AckermannDriveStamped          PLACEHOLDER, GAP A1 -- this topic
                                                                              already exists in the repo's naming
                                                                              convention with 2 subscribers and 0
@@ -25,7 +32,10 @@ does not re-explain each gap.
                                                                              CAN-byte resolution); 3rd-choice
                                                                              v_x source, GAP A1
     in   /fsae/perception/cone_detection     fsae_interfaces/ConeDetection  proximity e-brake, car-local frame
-    out  /fsae/control/cmd_vel               ackermann_msgs/AckermannDriveStamped  speed (m/s) + steer (deg)
+    out  <cmd_topic>                         ackermann_msgs/AckermannDriveStamped  speed (m/s) + steer (deg);
+                                                                             default /fsae/control/cmd_vel. frame_id
+                                                                             is 'nmpc_safe_stop' on a safe-stop
+                                                                             command, 'nmpc_controller' otherwise
     out  /fsae/control/accel_cmd             ackermann_msgs/AckermannDriveStamped  PLACEHOLDER, GAP B1 -- the
                                                                              NMPC's raw signed a_cmd (m/s^2) in
                                                                              .drive.acceleration; nothing
@@ -74,6 +84,7 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from fsae_interfaces.msg import ConeDetection
 from geometry_msgs.msg import Pose, PoseArray
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import Imu
 from std_msgs.msg import String
 
 from fsae_control.control_utils import (
@@ -81,7 +92,6 @@ from fsae_control.control_utils import (
     load_path_heading_profile_csv,
     load_speed_profile_csv, precomputed_speed_at, tracking_error_speed_gate,
 )
-from fsae_control.mpc.control_limits import MAX_STEER_RAD as NMPC_MAX_STEER_RAD
 from fsae_control.mpc.nmpc_core import NMPCController
 from fsae_control.mpc.mpc_params import declare_mpc_params, mpc_params_from_node
 from fsae_control.mpc.nmpc_params import declare_nmpc_params, nmpc_params_from_node
@@ -168,6 +178,29 @@ class NMPCControllerNode(Node):
                 ('path_map_path', ''),  # '' -> live /fsae/planning/selected_trajectory
                                         # (default); see GAP C2.
                 ('use_precomputed_heading_profile', False),
+                # State inputs. Defaults keep the original topic contract; the
+                # go-kart launch (nmpc_gokart.launch.py) overrides them.
+                ('odom_topic', '/fsae/slam/car_odom'),
+                # 'twist' reads the Odometry twist. 'pose_diff' differentiates
+                # the stamped pose instead, for an odometry source whose twist
+                # is empty or untrusted.
+                ('odom_velocity_source', 'twist'),
+                ('odom_diff_lp', 0.5),       # EMA weight on pose_diff samples; 1.0 = raw
+                ('use_measured_vy', True),   # false -> v_y = 0 (kinematic-regime vehicles)
+                ('imu_topic', ''),           # '' = off
+                ('imu_yaw_rate_sign', 1.0),  # flip to -1.0 if the IMU's z axis points down
+                ('state_timeout_s', 0.3),    # odom/IMU older than this is ignored
+                ('cmd_topic', '/fsae/control/cmd_vel'),
+                # Vehicle model. -1.0 keeps nmpc_core._Plant's FSDS value.
+                # The pose this node receives is the model's reference point:
+                # lr is how far that point sits ahead of the rear axle, lf how
+                # far it sits behind the front axle.
+                ('plant_lf', -1.0),          # m
+                ('plant_lr', -1.0),          # m
+                ('plant_v_blend_lo', -1.0),  # m/s, fully kinematic model below this
+                ('plant_v_blend_hi', -1.0),  # m/s, fully dynamic (tyre) model above this
+                ('plant_tau_delta', -1.0),   # s, steering actuator lag
+                ('plant_max_steer_deg', -1.0),   # road-wheel steering limit
             ],
         )
         self._v_max = self.get_parameter('v_max').get_parameter_value().double_value
@@ -180,12 +213,28 @@ class NMPCControllerNode(Node):
         self._dynamic_cap_safety = self.get_parameter(
             'dynamic_cap_safety').get_parameter_value().double_value
         max_steer_deg = self.get_parameter('max_steer_angle').get_parameter_value().double_value
-        # GAP B4: the tighter of the two limits, so the published command can
-        # never exceed either the solver's own assumption or ack_to_can's
-        # hard-rejection threshold.
-        self._max_steer_deg = min(max_steer_deg, math.degrees(NMPC_MAX_STEER_RAD))
         self._accel_to_speed_horizon_s = self.get_parameter(
             'accel_to_speed_horizon_s').get_parameter_value().double_value
+        g = self.get_parameter
+        odom_topic = g('odom_topic').get_parameter_value().string_value
+        self._odom_velocity_source = g('odom_velocity_source').get_parameter_value().string_value
+        if self._odom_velocity_source not in ('twist', 'pose_diff'):
+            raise ValueError(
+                f"odom_velocity_source must be 'twist' or 'pose_diff', got "
+                f"{self._odom_velocity_source!r}")
+        self._odom_diff_lp = g('odom_diff_lp').get_parameter_value().double_value
+        self._use_measured_vy = g('use_measured_vy').get_parameter_value().bool_value
+        imu_topic = g('imu_topic').get_parameter_value().string_value
+        self._imu_yaw_rate_sign = g('imu_yaw_rate_sign').get_parameter_value().double_value
+        self._state_timeout_s = g('state_timeout_s').get_parameter_value().double_value
+        cmd_topic = g('cmd_topic').get_parameter_value().string_value
+        plant_overrides = {}
+        for field in ('lf', 'lr', 'v_blend_lo', 'v_blend_hi', 'tau_delta'):
+            value = g(f'plant_{field}').get_parameter_value().double_value
+            if value >= 0.0:
+                plant_overrides[field] = value
+        plant_max_steer_deg = g('plant_max_steer_deg').get_parameter_value().double_value
+        max_steer_rad = math.radians(plant_max_steer_deg) if plant_max_steer_deg > 0.0 else None
 
         declare_mpc_params(self)
         mpc_params = mpc_params_from_node(self)
@@ -260,7 +309,9 @@ class NMPCControllerNode(Node):
         # today. Subscribed unconditionally so a future state estimator on
         # this exact topic/type (matching the sim tree's own contract) needs
         # no change here.
-        self.create_subscription(Odometry, '/fsae/slam/car_odom', self._odom_cb, sensor_qos)
+        self.create_subscription(Odometry, odom_topic, self._odom_cb, sensor_qos)
+        if imu_topic:
+            self.create_subscription(Imu, imu_topic, self._imu_cb, sensor_qos)
         # PLACEHOLDER (GAP A1): already exists in the repo's own topic naming
         # with 2 subscribers and 0 publishers — not a new topic.
         self.create_subscription(
@@ -272,7 +323,7 @@ class NMPCControllerNode(Node):
         self.create_subscription(
             ConeDetection, '/fsae/perception/cone_detection', self._cone_cb, 10)
 
-        self.pub_cmd = self.create_publisher(AckermannDriveStamped, '/fsae/control/cmd_vel', 5)
+        self.pub_cmd = self.create_publisher(AckermannDriveStamped, cmd_topic, 5)
         # PLACEHOLDER (GAP B1): nothing subscribes today. Exists so the raw
         # acceleration command is not silently discarded, and so a future
         # MoTeC channel / revised ack_to_can has something to read directly.
@@ -306,6 +357,11 @@ class NMPCControllerNode(Node):
 
         # v_x fallback ladder state (GAP A1) — see _resolve_state().
         self._have_odom = False
+        self._odom_stamp = None
+        self._odom_prev = None           # (t, x, y, yaw) of the last odom pose, pose_diff only
+        self._odom_filt = None           # filtered (v_x, v_y, r), pose_diff only
+        self._imu_r = 0.0
+        self._imu_stamp = None
         self._odom_vx = 0.0
         self._odom_vy = 0.0
         self._odom_r = 0.0
@@ -328,7 +384,16 @@ class NMPCControllerNode(Node):
         dt = 1.0 / CONTROL_HZ
         self._mpc = NMPCController(
             dt=dt, params=mpc_params, nmpc=nmpc_params, logger=self.get_logger(),
+            plant_overrides=plant_overrides, max_steer_rad=max_steer_rad,
         )
+        # GAP B4: the tighter of the two limits, so the published command can
+        # never exceed either the solver's own assumption or ack_to_can's
+        # hard-rejection threshold.
+        self._max_steer_deg = min(max_steer_deg, math.degrees(self._mpc.max_steer_rad))
+        if plant_overrides or max_steer_rad is not None:
+            self.get_logger().info(
+                f'Vehicle model overrides: {plant_overrides}, '
+                f'max steer {math.degrees(self._mpc.max_steer_rad):.1f} deg')
         if self._static_path is not None:
             if self._speed_profile is not None:
                 sp_x, sp_y, sp_v = self._speed_profile
@@ -368,7 +433,8 @@ class NMPCControllerNode(Node):
         # GAP A3 fallback: finite-difference yaw across ticks when car_odom
         # has no publisher. Noisy and one tick delayed by construction — see
         # NMPC_INTEGRATION_GAPS.md A3 for why this is a bring-up aid only.
-        if not self._have_odom and self._prev_yaw is not None and self._prev_yaw_time is not None:
+        if not self._fresh(self._odom_stamp) and self._prev_yaw is not None \
+                and self._prev_yaw_time is not None:
             dt_s = (now - self._prev_yaw_time).nanoseconds * 1e-9
             if dt_s > 1e-3:
                 raw_rate = _wrap(new_yaw - self._prev_yaw) / dt_s
@@ -384,14 +450,58 @@ class NMPCControllerNode(Node):
         self._have_pose = True
 
     def _odom_cb(self, msg: Odometry) -> None:
-        # PLACEHOLDER (GAP A1/A2/A3/A7): body-frame twist, same convention as
-        # the sim tree's sim_perception.py. Highest-priority source for all
-        # three of v_x/v_y/yaw_rate the moment this topic has a publisher.
-        v = msg.twist.twist.linear
+        # Body-frame velocity (x forward, y left), same convention as the sim
+        # tree's sim_perception.py. Highest-priority source for v_x/v_y/yaw_rate
+        # while fresh, see _resolve_state().
+        if self._odom_velocity_source == 'pose_diff':
+            vel = self._odom_pose_diff(msg)
+            if vel is None:
+                return
+            vx, vy, r = vel
+        else:
+            v = msg.twist.twist.linear
+            vx, vy, r = float(v.x), float(v.y), float(msg.twist.twist.angular.z)
         self._have_odom = True
-        self._odom_vx = float(v.x)
-        self._odom_vy = float(v.y)
-        self._odom_r = float(msg.twist.twist.angular.z)
+        self._odom_stamp = self.get_clock().now()
+        self._odom_vx, self._odom_vy, self._odom_r = vx, vy, r
+
+    def _odom_pose_diff(self, msg: Odometry):
+        """(v_x, v_y, r) from two consecutive stamped odometry poses, or
+        None until two usable samples exist. Uses the message's own header
+        stamp, not arrival time, so transport jitter does not show up as
+        speed noise. The displacement is rotated into the body frame at the
+        mid-interval heading. A gap over 0.5 s restarts the estimate rather
+        than averaging across it."""
+        t = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        pos = msg.pose.pose.position
+        q = msg.pose.pose.orientation
+        yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+        prev = self._odom_prev
+        self._odom_prev = (t, pos.x, pos.y, yaw)
+        if prev is None:
+            return None
+        dt_s = t - prev[0]
+        if dt_s <= 1e-3 or dt_s > 0.5:
+            self._odom_filt = None
+            return None
+        dyaw = _wrap(yaw - prev[3])
+        yaw_mid = prev[3] + 0.5 * dyaw
+        dx, dy = pos.x - prev[1], pos.y - prev[2]
+        c, s = math.cos(yaw_mid), math.sin(yaw_mid)
+        raw = np.array([(c * dx + s * dy) / dt_s, (-s * dx + c * dy) / dt_s, dyaw / dt_s])
+        if self._odom_filt is None:
+            self._odom_filt = raw
+        else:
+            self._odom_filt = self._odom_filt + self._odom_diff_lp * (raw - self._odom_filt)
+        return tuple(float(v) for v in self._odom_filt)
+
+    def _imu_cb(self, msg: Imu) -> None:
+        self._imu_r = self._imu_yaw_rate_sign * float(msg.angular_velocity.z)
+        self._imu_stamp = self.get_clock().now()
+
+    def _fresh(self, stamp) -> bool:
+        return (stamp is not None
+                and (self.get_clock().now() - stamp).nanoseconds * 1e-9 <= self._state_timeout_s)
 
     def _curr_vel_cb(self, msg: AckermannDriveStamped) -> None:
         self._have_curr_vel = True
@@ -415,12 +525,16 @@ class NMPCControllerNode(Node):
         auditable in one place instead of scattered across the control step.
         Returns (v_x, v_y, yaw_rate, source_name).
         """
-        if self._have_odom:
-            return self._odom_vx, self._odom_vy, self._odom_r, 'car_odom'
+        imu_fresh = self._fresh(self._imu_stamp)
+        if self._have_odom and self._fresh(self._odom_stamp):
+            v_y = self._odom_vy if self._use_measured_vy else 0.0
+            yaw_rate = self._imu_r if imu_fresh else self._odom_r
+            return self._odom_vx, v_y, yaw_rate, 'car_odom+imu' if imu_fresh else 'car_odom'
         # v_y has no fallback source at all (GAP A2) — defaults to 0.0
         # regardless of which v_x/yaw_rate source below is active.
         v_y = 0.0
-        yaw_rate = self._yaw_rate_est   # GAP A3 finite-difference fallback
+        # GAP A3 finite-difference fallback, unless the IMU is live.
+        yaw_rate = self._imu_r if imu_fresh else self._yaw_rate_est
         if self._have_curr_vel:
             return self._curr_vel_speed, v_y, yaw_rate, 'curr_vel'
         if self._have_drive_status:
@@ -459,6 +573,9 @@ class NMPCControllerNode(Node):
         never publishing is worse than publishing an honest stop."""
         msg = AckermannDriveStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
+        # Lets a downstream consumer (joystick_teleop's NMPC steering mode)
+        # tell an honest stop apart from a commanded straight-ahead.
+        msg.header.frame_id = 'nmpc_safe_stop'
         msg.drive.speed = 0.0
         msg.drive.steering_angle = 0.0
         msg.drive.acceleration = 0.0
@@ -672,6 +789,7 @@ class NMPCControllerNode(Node):
 
         msg = AckermannDriveStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'nmpc_controller'
         msg.drive.speed = v_cmd
         msg.drive.steering_angle = steer_deg
         # GAP B7: ack_to_can drops the WHOLE message if either of these is
