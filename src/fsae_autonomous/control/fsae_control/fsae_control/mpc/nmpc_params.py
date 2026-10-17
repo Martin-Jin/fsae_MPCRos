@@ -271,13 +271,20 @@ class NMPCParams:
         "controller": "nmpc_only",
     })
 
-    # ── Soft track constraint (default from the simulation controller) ──
-    nmpc_track_halfwidth: float = field(default=3.5, metadata={
+    # ── Soft track constraint ────────────────────────────────────────────
+    # Sized for the kart test track: cones about 2.5 m apart (+-1.25 m from
+    # the centreline), set up by hand, so the real width varies. The bound
+    # is about twice the cone half-width, the same ratio as the setup the
+    # weights were tuned on, so it guards against leaving the track rather
+    # than acting near the cones. A bound at the cones (1.25) would be active
+    # in normal driving with a slack weight of 10000, which is untested and
+    # could make the steering react hard to a noisy e_y.
+    nmpc_track_halfwidth: float = field(default=2.4, metadata={
         "unit": "m",
-        "desc": "soft |e_y| bound with slack, a default carried over from the "
-                "simulation controller's +-3.5 m bound; UNVERIFIED on the "
-                "car or kart. <=0 removes the constraint (and its slack "
-                "variables) entirely",
+        "desc": "soft |e_y| bound with slack, about twice the kart track's "
+                "cone half-width (cones ~2.5 m apart, set by hand); tuned in "
+                "simulation as a guard, UNVERIFIED on the car or kart. <=0 "
+                "removes the constraint (and its slack variables) entirely",
         "controller": "nmpc_only",
     })
     nmpc_slack_weight: float = field(default=10000.0, metadata={

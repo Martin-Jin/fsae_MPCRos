@@ -128,7 +128,7 @@ SPEED_TARGET_RISE_RATE = 7.0
 #
 # Not specific to launch: the same rule stops the target running away after a
 # spin or a heavy brake, for the same reason.
-SPEED_TARGET_DEFICIT_MAX = 2.5
+SPEED_TARGET_DEFICIT_MAX = 2.55
 # Max rate (gate-units/s) at which tracking_error_speed_gate()'s output may
 # change per tick, in EITHER direction — see control_utils' own docstring.
 GATE_RATE_LIMIT = 2.0

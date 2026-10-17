@@ -13,6 +13,7 @@ each box. The *why* behind each item is in
 | Bench test (`nmpc_bench.launch.py`): end-of-path hold, no command to any vehicle | pass, run by hand on a PC |
 | Shadow mode (`nmpc_shadow.launch.py`) publishes only on its own topic | pass on a PC with scripted inputs |
 | End-of-path speed cap | offline closed-loop check only; in simulation with a live planner the speed stayed around 6 to 7 m/s, by design (UNVERIFIED on the kart) |
+| Steering weights updated to the newer simulation-tuned set (section 6) | unit tests and bench test pass on a PC; UNVERIFIED on the kart |
 | **Steering sweep, wheelbase, R1 index** (section 3) | **not done** |
 | **Sensor checks on the kart** (section 4) | **not done** |
 | **Shadow mode on the kart** (section 4b) | **not done** |
@@ -199,7 +200,49 @@ so nothing reaches the servo.
   kart to run slightly wide in tight corners (about 0.5 m on a 6 m radius in an offline
   kinematic-model check; UNVERIFIED on the kart).
 
-## 6. After each session
+## 6. Values that may need retuning on the kart
+
+**Measure first (section 3), then judge the steering in shadow mode (section 4b), then retune only what a symptom points at.** Every value below was tuned in simulation on a different vehicle model (dynamic, with a lateral-acceleration limit, with the NMPC also driving the speed). On the kart the model is kinematic, that limit is off, and only the steering half of the cost matters. UNVERIFIED on the kart.
+
+### How to change one
+
+- `nmpc_gokart` and `nmpc_shadow` read these from the `nmpc_controller:` block of `common/fsae_bringup/config/fsae_params.yaml`, not from launch arguments. Edit the YAML, rebuild `fsae_bringup` (not a symlink install), relaunch. The node reads parameters only at start-up.
+- Change one value at a time, by about 20 to 30 percent, and re-check in shadow mode before steering.
+- Once a value is settled, copy it into `mpc_params.py`/`nmpc_params.py` too. `control.launch.py` passes the dataclass defaults as launch arguments, which override the YAML, so the two must stay equal.
+
+### The steering set: tuned as one set, change with care
+
+These were tuned together. `r_rate_delta` 100 assumes the zone schedule eases the rate cost into and through corners, and the jerk term carries part of the smoothing. Changing one in isolation gives an untested combination.
+
+| Field | Value | What it does | Symptom that points at it |
+|---|---|---|---|
+| `q_e_y` | 6.4 | cost on lateral offset from the path | runs wide or cuts corners: raise. Hunts side to side: lower |
+| `q_e_psi` | 1.65 | cost on heading error | slow to line up after a bend: raise |
+| `q_r` | 1.0 | under the NMPC, cost on the heading-error rate | overshoots the heading out of a bend: raise |
+| `r_delta` | 1.8 | cost on steering angle | under-steers everywhere: lower |
+| `r_rate_delta` | 100 | cost on steering rate, scaled by the zone schedule | late, lazy turn-in: lower. Twitchy wheel: raise |
+| `nmpc_rjerk_delta` | 150 | cost on steering acceleration; makes wiggles expensive and smooth ramps cheap | small fast wiggles on straights: raise |
+| `nmpc_rrate_zone_enabled` | true | scales `r_rate_delta` by where the kart is: straight, corner ahead, in corner | turn this off only as a diagnosis step |
+| `nmpc_rrate_zone_boost_straight` | 2.0 | rate-cost multiplier on a straight | wanders on straights: raise |
+| `nmpc_rrate_zone_ease_approach` | 0.80 | multiplier when a corner is in the prediction horizon | turns in late: lower |
+| `nmpc_rrate_zone_floor_corner` | 0.15 | multiplier mid-corner | cannot add lock mid-corner: lower |
+| `nmpc_corner_factor_k` | 27 | how fast "corner" saturates with curvature | see below |
+
+**`nmpc_corner_factor_k` depends on the track.** The zone schedule only reaches its corner values when `k * |kappa| / (1 + k * |kappa|)` gets close to 1 at the tightest corner (`kappa` = 1 / radius). 27 suits a tightest radius of about 5 m (gives 0.84). For a different tightest radius `R`, `k ~= target * R / (1 - target)`, e.g. 0.85 at 3 m radius gives `k ~= 17`.
+
+### Track and vehicle values
+
+| Field | Value | Note |
+|---|---|---|
+| `nmpc_track_halfwidth` | 2.4 m | soft bound on lateral offset from the centreline. Set for cones about 2.5 m apart (±1.25 m), at about twice the cone half-width so it guards against leaving the track rather than acting near the cones. The track is set up by hand: measure its narrowest gap and keep the bound near 2 × (gap / 2). Lowering it towards the cones makes it active in normal driving, which is untested |
+| `nmpc_alat_ceiling_enabled` | false | **keep off.** Models a lateral-acceleration limit never measured on the kart |
+| `plant_*`, steering scale and sign | section 3 | measured values, not tuning |
+
+### Only matter once the NMPC drives the throttle
+
+`q_e_v` 1.5, `r_a_accel` 0.9, `r_a_brake` 0.6, `r_rate_a` 2.0 and `SPEED_TARGET_DEFICIT_MAX` 2.55 m/s (a constant in `nmpc_controller.py`, not a parameter) shape the speed half of the cost. In this steering-only test the driver sets the speed and the NMPC's speed command is ignored, so leave them alone until the throttle is wired.
+
+## 7. After each session
 
 - [ ] Note what was measured or changed in `NMPC_GOKART_GROUND_TEST.md`.
 - [ ] Commit to `feat/mpc_ground_test` and mirror the changed files to `fsae_MPCRos`

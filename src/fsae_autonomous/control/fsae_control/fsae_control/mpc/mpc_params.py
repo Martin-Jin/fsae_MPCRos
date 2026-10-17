@@ -36,27 +36,34 @@ import math
 @dataclass
 class MPCParams:
     # ── Core cost weights ───────────────────────────────────────────────
+    # These base weights were tuned in simulation as ONE set together with
+    # the NMPC steering-rate settings further down (nmpc_rjerk_delta, the
+    # nmpc_rrate_zone_* schedule, nmpc_corner_factor_k). Change them
+    # together: r_rate_delta=100 in particular assumes the zone schedule
+    # eases the rate cost on the approach to and through a corner, and the
+    # jerk term carries part of the smoothing r_rate_delta used to. Tuned in
+    # simulation; UNVERIFIED on the car or kart.
     # Q_diag index -> state penalised (states x are [e_y, e_yd, e_psi, r,
     # e_v, e_a, delta_act, a_act] in the simulation controller these
     # weights were tuned on; NMPCController applies them to its own outputs,
     # see nmpc_core._outputs):
-    q_e_y:   float = field(default=6.35, metadata={"unit": "1/m^2",   "desc": "lateral deviation from path centreline", "controller": "both"})
-    q_e_yd:  float = field(default=0.5,  metadata={"unit": "1/(m/s)^2", "desc": "rate of change of lateral deviation", "controller": "both"})
+    q_e_y:   float = field(default=6.4, metadata={"unit": "1/m^2",   "desc": "lateral deviation from path centreline", "controller": "both"})
+    q_e_yd:  float = field(default=0.0,  metadata={"unit": "1/(m/s)^2", "desc": "rate of change of lateral deviation", "controller": "both"})
     q_e_psi: float = field(default=1.65, metadata={"unit": "1/rad^2", "desc": "heading error relative to path tangent", "controller": "both"})
-    q_r:     float = field(default=1.20, metadata={"unit": "1/(rad/s)^2", "desc": "yaw rate in the simulation controller. Shared base value the NMPC also reads (see nmpc_q_epsi_dot below), but under the NMPC it weights heading-error RATE, not absolute yaw rate: same slot, different regressor", "controller": "both"})
-    q_e_v:   float = field(default=5.5,  metadata={"unit": "1/(m/s)^2", "desc": "speed error: car_speed - desired_speed", "controller": "both"})
+    q_r:     float = field(default=1.0, metadata={"unit": "1/(rad/s)^2", "desc": "yaw rate in the simulation controller. Shared base value the NMPC also reads (see nmpc_q_epsi_dot below), but under the NMPC it weights heading-error RATE, not absolute yaw rate: same slot, different regressor", "controller": "both"})
+    q_e_v:   float = field(default=1.5,  metadata={"unit": "1/(m/s)^2", "desc": "speed error: car_speed - desired_speed", "controller": "both"})
     # R_diag index -> input penalised (inputs u are [delta_cmd, a_cmd]):
-    r_delta: float = field(default=1.35, metadata={"unit": "1/rad^2",     "desc": "steering command effort", "controller": "both"})
+    r_delta: float = field(default=1.8, metadata={"unit": "1/rad^2",     "desc": "steering command effort", "controller": "both"})
     # a_cmd>=0 (accel) and a_cmd<0 (brake) get independent effort weights
     # instead of one weight applied symmetrically to |a_cmd| -- a single
     # shared weight cannot be tuned for acceleration and braking
     # independently. The NMPC inherits both (see nmpc_r_a_accel/
     # nmpc_r_a_brake below).
-    r_a_accel: float = field(default=2.25, metadata={"unit": "1/(m/s^2)^2", "desc": "acceleration command effort, a_cmd >= 0", "controller": "both"})
-    r_a_brake: float = field(default=0.5, metadata={"unit": "1/(m/s^2)^2", "desc": "acceleration command effort, a_cmd < 0 (braking)", "controller": "both"})
+    r_a_accel: float = field(default=0.9, metadata={"unit": "1/(m/s^2)^2", "desc": "acceleration command effort, a_cmd >= 0", "controller": "both"})
+    r_a_brake: float = field(default=0.6, metadata={"unit": "1/(m/s^2)^2", "desc": "acceleration command effort, a_cmd < 0 (braking)", "controller": "both"})
     # R_rate_diag index -> input RATE-OF-CHANGE penalised (tick-to-tick jerk):
-    r_rate_delta: float = field(default=52.50, metadata={"unit": "1/(rad/s)^2",     "desc": "steering rate of change", "controller": "both"})
-    r_rate_a:     float = field(default=5.0, metadata={"unit": "1/(m/s^3)^2",     "desc": "acceleration rate of change", "controller": "both"})
+    r_rate_delta: float = field(default=100.0, metadata={"unit": "1/(rad/s)^2",     "desc": "steering rate of change", "controller": "both"})
+    r_rate_a:     float = field(default=2.0, metadata={"unit": "1/(m/s^3)^2",     "desc": "acceleration rate of change", "controller": "both"})
     # Extra weight on the final predicted state x[:,N]. 1.0 = no-op, the
     # only value tested (in simulation) with the Q_diag/R_diag/R_rate_diag
     # above.
@@ -231,11 +238,11 @@ class MPCParams:
     nmpc_reversal_penalty_k: float = field(default=-1.0, metadata={"unit": "1/rad", "desc": "override reversal_penalty_k for the NMPC only (-1 = inherit). Only read when nmpc_reversal_penalty_enabled is True", "controller": "nmpc_only"})
     nmpc_rrate_stage_ramp_enabled: bool = field(default=False, metadata={"unit": "bool", "desc": "EXPERIMENTAL: discount the steering-RATE cost at the NEAR horizon stages (linear ramp from nmpc_rrate_stage_near at stage 0 to 1.0 at the last stage) so a first turn-in input is cheap while a sustained oscillation still pays close to full price. Keyed on horizon POSITION, not measured state. Made shallow-corner steering jerk worse in simulation (more slew-limited ticks). Default False; UNVERIFIED on the car or kart", "controller": "nmpc_only"})
     nmpc_rrate_stage_near: float = field(default=0.15, metadata={"unit": "unitless", "desc": "stage-0 multiplier for the steering-rate cost ramp; 1.0 is an exact no-op. Lower = cheaper to move the wheel at the near horizon stages. Only read when nmpc_rrate_stage_ramp_enabled is True", "controller": "nmpc_only"})
-    nmpc_rrate_zone_enabled: bool = field(default=False, metadata={"unit": "bool", "desc": "EXPERIMENTAL: continuous three-zone schedule on the steering-RATE cost -- boost on a true straight, ease on the approach to a corner the HORIZON predicts, floor through the corner. Smooth (no thresholds), degrades to the corner value on a continuously-winding road. MULTIPLIES r_rate_delta, unlike nmpc_corner_rrate_blend_enabled which overwrites it. Default False", "controller": "nmpc_only"})
+    nmpc_rrate_zone_enabled: bool = field(default=True, metadata={"unit": "bool", "desc": "EXPERIMENTAL: continuous three-zone schedule on the steering-RATE cost -- boost on a true straight, ease on the approach to a corner the HORIZON predicts, floor through the corner. Smooth (no thresholds), degrades to the corner value on a continuously-winding road. MULTIPLIES r_rate_delta, unlike nmpc_corner_rrate_blend_enabled which overwrites it. On by default as part of the base-weight set (see Core cost weights); tuned in simulation, UNVERIFIED on the car or kart", "controller": "nmpc_only"})
     nmpc_rrate_zone_boost_straight: float = field(default=2.0, metadata={"unit": "unitless", "desc": "x r_rate on a true straight (nothing now, nothing ahead)", "controller": "nmpc_only"})
-    nmpc_rrate_zone_ease_approach: float = field(default=0.35, metadata={"unit": "unitless", "desc": "x r_rate when a corner is AHEAD in the horizon but not here yet -- the turn-in release", "controller": "nmpc_only"})
+    nmpc_rrate_zone_ease_approach: float = field(default=0.8, metadata={"unit": "unitless", "desc": "x r_rate when a corner is AHEAD in the horizon but not here yet -- the turn-in release", "controller": "nmpc_only"})
     nmpc_rrate_zone_floor_corner: float = field(default=0.15, metadata={"unit": "unitless", "desc": "x r_rate mid-corner", "controller": "nmpc_only"})
-    nmpc_rjerk_delta: float = field(default=0.0, metadata={"unit": "1/(rad/s^2)^2", "desc": "EXPERIMENTAL: steering-JERK weight, penalising the SECOND difference of the steering command (steering acceleration) rather than only the first. A steady ramp into a corner has near-zero second difference and is nearly free; an alternating wiggle is expensive. In simulation, reversals carry ~4.3x the |d2| of ramps vs only ~1.9x the |d1|; UNVERIFIED on the car or kart. Intended to let r_rate_delta come back down. 0.0 disables the term entirely (no Hessian contribution)", "controller": "nmpc_only"})
+    nmpc_rjerk_delta: float = field(default=150.0, metadata={"unit": "1/(rad/s^2)^2", "desc": "EXPERIMENTAL: steering-JERK weight, penalising the SECOND difference of the steering command (steering acceleration) rather than only the first. A steady ramp into a corner has near-zero second difference and is nearly free; an alternating wiggle is expensive. In simulation, reversals carry ~4.3x the |d2| of ramps vs only ~1.9x the |d1|; UNVERIFIED on the car or kart. Intended to let r_rate_delta come back down. 0.0 disables the term entirely (no Hessian contribution)", "controller": "nmpc_only"})
     nmpc_rjerk_a: float = field(default=0.0, metadata={"unit": "1/(m/s^4)^2", "desc": "acceleration-jerk weight, second difference of a_cmd. 0.0 disables", "controller": "nmpc_only"})
 
     # Straight/corner R_rate[steer] blend, a narrow subset of the
@@ -250,7 +257,7 @@ class MPCParams:
     # composition with it -- nmpc_core.py checks this flag first and skips
     # anti-hunt entirely when it's on; run with anti-hunt OFF when using this.
     nmpc_corner_rrate_blend_enabled: bool = field(default=False, metadata={"unit": "bool", "desc": "EXPERIMENTAL: blend R_rate[0,0] between nmpc_rrate_steer_straight/_corner by CURRENT curvature (control_limits._corner_factor/_blend). Takes priority over nmpc_steer_rate_anti_hunt_enabled if both are set -- use one or the other, not both. Default False, unvalidated", "controller": "nmpc_only"})
-    nmpc_corner_factor_k: float = field(default=-1.0, metadata={"unit": "unitless", "desc": "override corner_factor_k for the NMPC only (-1 = inherit). Read by BOTH nmpc_corner_rrate_blend_enabled AND nmpc_rrate_zone_enabled. The zone needs _corner_factor to SATURATE for its ease/floor endpoints to be reachable, so scale this with the track max curvature (k ~= target/((1-target)*kappa_max)); the inherited corner_factor_k default of 8.0 tops corner_frac out near 0.63 on a track whose tightest corner is |kappa|~0.2, which silently reduces the zone to a mild global rate boost", "controller": "nmpc_only"})
+    nmpc_corner_factor_k: float = field(default=27.0, metadata={"unit": "unitless", "desc": "override corner_factor_k for the NMPC only (-1 = inherit). Read by BOTH nmpc_corner_rrate_blend_enabled AND nmpc_rrate_zone_enabled. The zone needs _corner_factor to SATURATE for its ease/floor endpoints to be reachable, so scale this with the track max curvature (k ~= target/((1-target)*kappa_max)); the inherited corner_factor_k default of 8.0 tops corner_frac out near 0.63 on a track whose tightest corner is |kappa|~0.2, which silently reduces the zone to a mild global rate boost. Default 27 assumes the tightest corner is around |kappa| 0.2 (corner_frac ~0.84 there); rescale for a track with different corners. Tuned in simulation; UNVERIFIED on the car or kart", "controller": "nmpc_only"})
     nmpc_rrate_steer_straight: float = field(default=-1.0, metadata={"unit": "1/(rad/s)^2", "desc": "override rrate_steer_straight for the NMPC only (-1 = inherit). Only read when nmpc_corner_rrate_blend_enabled is True", "controller": "nmpc_only"})
     nmpc_rrate_steer_corner: float = field(default=-1.0, metadata={"unit": "1/(rad/s)^2", "desc": "override rrate_steer_corner for the NMPC only (-1 = inherit). Only read when nmpc_corner_rrate_blend_enabled is True", "controller": "nmpc_only"})
 

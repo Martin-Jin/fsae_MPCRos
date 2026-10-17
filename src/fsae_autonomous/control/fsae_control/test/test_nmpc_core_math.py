@@ -153,7 +153,7 @@ def test_xy_at_inverts_project():
     along/perp correction (a locally straight approximation), and xy_at()
     inverts exactly that approximation, not the path's true curved
     geometry. At a realistic tracking offset (a few cm, this controller's
-    actual operating regime, not the +-3.5 m soft track bound) the two
+    actual operating regime, not the metres-wide soft track bound) the two
     agree to sub-mm; deliberately checked at only that scale, since a
     large synthetic e_y (metres, on this file's 13 m-radius corner) makes
     the expected error ~0.5*kappa*e_y^2 by construction, not a bug.

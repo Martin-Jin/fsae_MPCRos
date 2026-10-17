@@ -76,16 +76,20 @@ nmpc_controller:
     plant_max_steer_deg: -1.0
 
     # --- MPCParams: base Q/R/R_rate weights (also read by the NMPC via nmpc_* overrides below) ---
-    q_e_y: 6.35
-    q_e_yd: 0.5
+    # One tuned set with nmpc_rjerk_delta, nmpc_rrate_zone_* and nmpc_corner_factor_k
+    # below; change them together. Tuned in simulation; UNVERIFIED on the car or kart.
+    # Keep equal to mpc_params.py: control.launch.py overrides these with the
+    # dataclass defaults, while nmpc_gokart/nmpc_shadow read them from here.
+    q_e_y: 6.4
+    q_e_yd: 0.0
     q_e_psi: 1.65
-    q_r: 1.2
-    q_e_v: 5.5
-    r_delta: 1.35
-    r_a_accel: 2.25
-    r_a_brake: 0.5
-    r_rate_delta: 52.5
-    r_rate_a: 5.0
+    q_r: 1.0
+    q_e_v: 1.5
+    r_delta: 1.8
+    r_a_accel: 0.9
+    r_a_brake: 0.6
+    r_rate_delta: 100.0
+    r_rate_a: 2.0
     terminal_q_scale: 1.0
 
     # --- MPCParams: simulation-controller-only adaptive-gain fields ---
@@ -142,14 +146,14 @@ nmpc_controller:
     nmpc_reversal_penalty_k: -1.0
     nmpc_rrate_stage_ramp_enabled: false
     nmpc_rrate_stage_near: 0.15
-    nmpc_rrate_zone_enabled: false
+    nmpc_rrate_zone_enabled: true
     nmpc_rrate_zone_boost_straight: 2.0
-    nmpc_rrate_zone_ease_approach: 0.35
+    nmpc_rrate_zone_ease_approach: 0.8
     nmpc_rrate_zone_floor_corner: 0.15
-    nmpc_rjerk_delta: 0.0
+    nmpc_rjerk_delta: 150.0
     nmpc_rjerk_a: 0.0
     nmpc_corner_rrate_blend_enabled: false
-    nmpc_corner_factor_k: -1.0
+    nmpc_corner_factor_k: 27.0
     nmpc_rrate_steer_straight: -1.0
     nmpc_rrate_steer_corner: -1.0
 
@@ -189,7 +193,7 @@ nmpc_controller:
     nmpc_trust_delta_rad: 0.15707963267948966
     nmpc_trust_a: 0.6
     nmpc_backtrack_max: 2
-    nmpc_track_halfwidth: 3.5
+    nmpc_track_halfwidth: 2.4
     nmpc_slack_weight: 10000.0
     nmpc_curvature_dense_step: 0.5
     nmpc_curvature_smooth_w: 3
