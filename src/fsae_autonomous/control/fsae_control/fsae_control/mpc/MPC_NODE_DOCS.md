@@ -137,6 +137,34 @@ speed. That is open loop, but it does not stop the node running.
 | `/fsae/viz/nmpc_prediction_raw` | `geometry_msgs/PoseArray` | RViz only, gated by `nmpc_publish_prediction_enabled` (default off). `"map"`-frame Cartesian conversion of the predicted horizon. |
 | `/fsae/viz/nmpc_telemetry` | `std_msgs/String` (JSON) | `nmpc_telemetry_gui.py` only, gated by `nmpc_publish_telemetry_enabled` (default off). `last_telemetry`'s ~30 fields plus `vx_source`/`car_x`/`car_y`/`car_yaw`, see "Live telemetry GUI" below. |
 
+## Speed target: how the requested speed is built
+
+Each tick the node builds one target speed and hands it to the NMPC. The NMPC tracks it
+through its speed-error cost and plans acceleration and braking within its limits. None
+of the steps below is a constraint inside the NMPC or a clip on its output.
+
+1. **Curvature speed:** `curvature_speed()` of the path ahead, between `v_min` and `v_max`.
+2. **Tracking-error gate:** slows the target when lateral or heading error is large
+   (rate-limited), then the `v_min` floor.
+3. **Rise limiter and deficit clamp:** the target may rise only so fast, and may not run
+   too far ahead of the car's speed.
+4. **End-of-path cap:** `min(target, sqrt(2 * path_end_decel * d))`, with
+   `d = remaining path - path_end_margin_m - speed * path_end_lag_s`. The car never asks
+   for more speed than it could stop from before the end of the path it has.
+5. **Inside the NMPC:** the target is low-passed and held across the 1 s horizon.
+
+**The car runs slower while it follows the live planner.** The planner's path ends where
+the visible cones end, so step 4 keeps the speed to what the visible path allows. This is
+intended. In simulation with a live planner the speed stayed around 6 to 7 m/s on a
+visible path of roughly 21 m (UNVERIFIED on the car or kart). A closed-loop (full-lap)
+path is never capped. Raise `path_end_decel` to allow more speed (estimated for a ~21 m
+path: 1.5 -> 6.5 m/s, 3.0 -> 8.5, 5.0 -> 10.2), or set it to 0 to turn the cap off. While
+the cap binds, the node logs `Near the end of the path: speed target capped at ...` once
+a second.
+
+On the kart ground test the driver sets the real speed, so the target only shapes the
+NMPC's plan.
+
 ## Running it
 
 ```bash

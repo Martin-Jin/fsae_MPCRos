@@ -180,7 +180,9 @@ error to reduce it. The effect shrinks with radius.
   UNVERIFIED on the kart or car.
   On the kart the driver sets the speed, so this only shapes the NMPC's plan. The
   planner's path ends where the visible cones end, so the cap also limits the planned
-  speed to what the visible path allows.
+  speed to what the visible path allows: **the NMPC plans slower with the live planner,
+  by design.** See "Speed target" in
+  [`MPC_NODE_DOCS.md`](../control/fsae_control/fsae_control/mpc/MPC_NODE_DOCS.md#speed-target-how-the-requested-speed-is-built).
 - **No throttle or brake from the NMPC.** `a_cmd` reaches `/fsae/control/accel_cmd` only.
 - **The cone-proximity brake does nothing here**: it zeroes the NMPC's speed command,
   which this test ignores. With no service brake either, the driver stops the kart by
