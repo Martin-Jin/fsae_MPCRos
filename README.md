@@ -61,9 +61,3 @@ ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true   # no vehicle, no c
 
 - ROS 2 Jazzy (the kart's Jetson runs its own ROS 2 install; see the checklist).
 - Python: `numpy`, `scipy`, `osqp` (`pip install -r requirements.txt`).
-
-## Old files on `main`
-
-`main`'s history also holds an earlier, different controller (`mpc_controller.py` and
-`test/test_mpc_controller.py`, an LTV-QP MPC). It is superseded by the NMPC and those two
-files no longer import. They are kept only so the history stays readable.
