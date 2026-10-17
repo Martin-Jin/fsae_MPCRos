@@ -17,7 +17,7 @@ from launch_ros.actions import Node
 #   planner  : fasttube (default) | fasttube_without_kalman | centerline_planner
 #   use_viz  : false (default) | true   - bring up RViz visualisation nodes
 #   use_gui  : false (default) | true   - bring up nmpc_telemetry_gui.py (matplotlib
-#              dashboard). Only meaningful with controller:=nmpc also passed — see
+#              dashboard). Only meaningful with controller:=nmpc also passed, see
 #              MPC_NODE_DOCS.md's "Live telemetry GUI" section.
 #
 # SLAM is skipped automatically when planner:=fasttube_without_kalman (that planner reads
@@ -44,7 +44,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_gui', default_value='false'),
         # Opting into the GUI opts into the telemetry topic it needs, same
         # pattern nmpc_bench.launch.py uses for its own use_gui. control.
-        # launch.py auto-generates this arg from NMPCParams — no change
+        # launch.py auto-generates this arg from NMPCParams, so no change
         # needed there, see nmpc_params.py's nmpc_publish_telemetry_enabled.
         DeclareLaunchArgument(
             'nmpc_publish_telemetry_enabled', default_value=use_gui),

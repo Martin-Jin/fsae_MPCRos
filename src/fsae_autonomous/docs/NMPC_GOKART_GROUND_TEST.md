@@ -5,6 +5,9 @@ trigger the whole time, and must hold the deadman. The NMPC's acceleration outpu
 computed but not used. This is a first ground test of the steering loop, not autonomous
 driving.
 
+**Nothing here has run on the kart yet.** The NMPC's weights and the vehicle constants
+the launch does not override were tuned in simulation. UNVERIFIED on the kart.
+
 > **There is no service brake.** In the current ECU firmware (`autonomous_gokart` `main`
 > and `feat/ground-testing`, `KART_BRAKE_ENABLED 0`) the brake actuator is disabled, and the
 > `B` field is only read for the go handshake. Pressing L2 does not slow the kart. To slow
@@ -18,6 +21,10 @@ ros2 launch fsae_bringup nmpc_gokart.launch.py            # RViz on by default
 ros2 launch fsae_bringup nmpc_gokart.launch.py use_gui:=true   # + NMPC telemetry dashboard
 ros2 launch fsae_bringup nmpc_gokart.launch.py use_rviz:=false # headless Jetson
 ```
+
+Before this test: [`NMPC_VALIDATION_AND_TESTING.md`](NMPC_VALIDATION_AND_TESTING.md) covers the unit
+tests, the bench test (no vehicle) and shadow mode (the NMPC watches while something else
+drives). In none of those does an NMPC command reach the kart.
 
 **To-do list for getting it running (measurements, checks, first runs):**
 [`NMPC_GOKART_BRINGUP_CHECKLIST.md`](NMPC_GOKART_BRINGUP_CHECKLIST.md).
@@ -83,7 +90,7 @@ laptop instead of the Jetson needs a remote-viz setup, which this branch does no
 | v_x | `/zed/zed_node/odom` | **differentiated** from the stamped pose (`odom_velocity_source: pose_diff`), rotated into the body frame, low-passed. The wrapper's twist is not used because it has not been checked on this rig |
 | yaw rate r | `/zed/zed_node/imu/data` | ZED 2i IMU `angular_velocity.z`. Falls back to the odometry-derived rate, then to Δyaw/Δt, if the IMU goes quiet for 0.3 s |
 | v_y | none | set to 0 (`use_measured_vy: false`); the model is kinematic at these speeds |
-| speed target | internal | from path curvature, between `v_min` 1.0 and `v_max` 3.0 m/s. Only shapes the NMPC's plan; the driver sets the real speed |
+| speed target | internal | from path curvature, between `v_min` 1.0 and `v_max` 3.0 m/s. Only shapes the NMPC's plan; the driver sets the real speed. The curvature-to-speed mapping is untuned (UNVERIFIED) |
 
 - No wheel-speed sensor exists, and the Arduino link is transmit-only, so ZED odometry is
   the only speed source.
@@ -97,15 +104,15 @@ laptop instead of the Jetson needs a remote-viz setup, which this branch does no
 | Quantity | Value | Source | Confidence |
 |---|---|---|---|
 | Rear axle → ZED left lens (the pose reference point), forward | 0.14 m | `gocartv2.urdf.xml`, tape-measured | measured |
-| Wheelbase | 1.00 m | `go_cart_base.stl` tyre contact patches at x = 0.00 and 0.995 m | **CAD only, not taped** |
-| NMPC `lr` / `lf` | 0.14 / 0.86 m | lens offset; wheelbase − lens offset | follows from the two above |
+| Wheelbase | 1.00 m | `go_cart_base.stl` tyre contact patches at x = 0.00 and 0.995 m | **CAD only, not taped.** UNVERIFIED |
+| NMPC `lr` / `lf` | 0.14 / 0.86 m | lens offset; wheelbase − lens offset | `lr` measured; `lf` UNVERIFIED (CAD wheelbase) |
 | Track width | 0.90 m | same mesh, contact patches at y = ±0.45 | CAD only, not used by the NMPC |
 | ZED pitch | 7.70° down | ZED IMU gravity vector, URDF | measured |
-| Road-wheel steering limit | 25° (`plant_max_steer_deg`) | the FSDS value, kept as a placeholder | **unmeasured** |
+| Road-wheel steering limit | 25° (`plant_max_steer_deg`) | simulation vehicle value, kept as a placeholder | **unmeasured.** UNVERIFIED |
 | Steering sign | `auto_steer_sign` −1: **+S steers RIGHT** | measured 2026-10-14 on the Stanley steering test (`test/planning-teleop-ground-test`), matches teleop's `invert_steer: true` | measured. The ECU firmware comment (+S = left) is wrong for this kart |
 | ECU S per road-wheel degree, left / right | 1.0 / 1.0 (`auto_steer_scale_left/right`) | placeholder | **unmeasured**. The firmware's S → pulse map is asymmetric (−180 spans 1403 µs, +180 only 847 µs), so each side needs its own value |
-| Steering lag `tau_delta` | 0.08 s | FSDS value | unmeasured |
-| Mass, yaw inertia, cornering stiffness | FSDS car's | not used: the model is kinematic below 8 m/s (`plant_v_blend_lo/hi` 8/9) | n/a for this test |
+| Steering lag `tau_delta` | 0.08 s | simulation vehicle value | **unmeasured.** UNVERIFIED |
+| Mass, yaw inertia, cornering stiffness | simulation vehicle's | not used: the model is kinematic below 8 m/s (`plant_v_blend_lo/hi` 8/9) | UNVERIFIED, n/a for this test |
 
 ### Measurements still needed
 
@@ -130,7 +137,7 @@ None of these are recorded on `feat/teleop-node-ground-testing` or on
      **not** road-wheel degrees. ±180 maps linearly onto each half of the pulse range
      around the measured centre 1453 µs: −S toward 50 µs (7.79 µs per S), +S toward
      2300 µs (4.71 µs per S). The servo's own potentiometer sets how far the wheels
-     actually travel. That asymmetry is why each side has its own scale.
+     travel. That asymmetry is why each side has its own scale.
 2. **Wheelbase**, rear axle centre to front axle centre. Then `plant_lf:=<wheelbase − 0.14>`.
 3. **R1 index**: hold R1 with `ros2 topic echo /joy` running and note which `buttons[]`
    entry goes to 1. Pass `button_auto_steer:=<n>` if it isn't 5.
@@ -142,12 +149,13 @@ URDF. `test/planning-teleop-ground-test` still has an older 0.201 m in its URDF.
 
 ## Known behaviour on tight arcs
 
-In an offline closed-loop check (kinematic kart, 6 m radius, 2 m/s), the NMPC settles at
-9.0° of steering against a kinematic 9.5°, but runs about **0.5 m wide** of the path with
-a steady −8° heading error. The NMPC measures heading error at the front axle, where the
+**Expect the kart to sit slightly outside the line in tight corners.** In an offline
+closed-loop check against a simple kinematic kart model (a unit-test harness, 6 m radius,
+2 m/s), the NMPC settles at 9.0° of steering against a kinematic 9.5°, but runs about
+**0.5 m wide** of the path with a steady −8° heading error. Offline kinematic-model check;
+UNVERIFIED on the kart. The NMPC measures heading error at the front axle, where the
 path tangent leads the kart's own heading by about lf / R (8.2° here), and trades lateral
-error to reduce it. The effect shrinks with radius. Expect the kart to sit slightly
-outside the line in tight corners.
+error to reduce it. The effect shrinks with radius.
 
 ## Bring-up checklist
 
@@ -162,11 +170,19 @@ outside the line in tight corners.
 
 ## Not done yet
 
+- **The NMPC does not slow down for the end of a path.** Its speed target comes from
+  path curvature only; it has no notion of where the path ends, and near the last
+  waypoint the node falls back to the whole path's curvature (on a straight, `v_max`).
+  On the kart the driver sets the speed, so this only shapes the NMPC's plan. A proposed
+  fix (not made): ramp the speed target to 0 once the remaining path is shorter than the
+  stopping distance.
 - **No throttle or brake from the NMPC.** `a_cmd` reaches `/fsae/control/accel_cmd` only.
 - **The cone-proximity brake does nothing here**: it zeroes the NMPC's speed command,
   which this test ignores. With no service brake either, the driver stops the kart by
   releasing the throttle, releasing X, or pulling the e-stop.
-- The tyre model, mass and inertia are the FSDS car's.
+- The tyre model, mass and inertia are the simulation vehicle's (UNVERIFIED on the kart;
+  unused below 8 m/s).
+- The NMPC weights were tuned in simulation (UNVERIFIED on the kart).
 - The steering slew limit in the ECU firmware is a TODO (`MAX_STEER_RATE_DEG_S` unused),
   and `joystick_teleop.max_steer_rate` is 0 (off) too, so the servo jumps to each command.
 - Frozen-input check: on `main` the ECU trips if throttle and steering both stay unchanged

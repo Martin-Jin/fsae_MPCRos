@@ -30,7 +30,10 @@ HOW TO RUN
 Or directly (still needs the package sourced first):
     pytest src/fsae_autonomous/control/fsae_control/test/test_bench_scenarios.py -v
 """
+import math
+
 import numpy as np
+import pytest
 
 from fsae_control.mpc import bench_scenarios as scen
 
@@ -131,3 +134,44 @@ def test_random_start_offset_is_reproducible_with_same_seed():
     offset1 = scen.random_start_offset(1.0, 15.0, rng1)
     offset2 = scen.random_start_offset(1.0, 15.0, rng2)
     assert offset1 == offset2
+
+
+# ---------------------------------------------------------------------------
+# End of path: the mock car must hold its final pose, not keep sweeping
+# ---------------------------------------------------------------------------
+
+def test_scripted_time_freezes_at_path_end():
+    t_end = 100.0 / 3.0
+    assert scen.scripted_time(10.0, 100.0, 3.0) == (10.0, False)
+    for t in (t_end, t_end + 0.05, t_end + 60.0):
+        t_eff, ended = scen.scripted_time(t, 100.0, 3.0)
+        assert ended
+        assert t_eff == pytest.approx(t_end)
+
+
+def test_scripted_time_never_ends_at_zero_speed():
+    assert scen.scripted_time(1e6, 100.0, 0.0) == (1e6, False)
+
+
+@pytest.mark.parametrize('scenario', ['straight', 'gentle_turn', 's_curve'])
+def test_mock_pose_is_held_after_path_end(scenario):
+    """Replays the mock publisher's pose formula (with the lateral sweep on)
+    past the end of the path: every pose after the end must be identical."""
+    from fsae_control.mpc.nmpc_core import PathReference
+    path = {
+        'straight': lambda: scen.straight_path(100.0),
+        'gentle_turn': lambda: scen.turn_path(25.0, 30.0),
+        's_curve': lambda: scen.s_curve_path(15.0, 45.0),
+    }[scenario]()
+    ref = PathReference(path)
+    speed, amplitude, period = 3.0, 1.0, 8.0
+
+    def pose(t):
+        t_eff, _ = scen.scripted_time(t, ref.total, speed)
+        e_y = amplitude * math.sin(2.0 * math.pi * t_eff / period)
+        x, y = ref.xy_at(speed * t_eff, e_y)
+        return float(x), float(y), float(ref.psi_ref_at(speed * t_eff))
+
+    t_end = ref.total / speed
+    held = [pose(t_end + dt) for dt in np.arange(0.0, 20.0, 0.05)]
+    assert all(p == pytest.approx(held[0]) for p in held)

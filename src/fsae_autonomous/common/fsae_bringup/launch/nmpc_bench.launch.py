@@ -2,11 +2,11 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, GroupAction, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import FileContent, LaunchConfiguration, PythonExpression
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetRemap
 from launch_ros.parameter_descriptions import ParameterValue
 
 
@@ -15,11 +15,16 @@ from launch_ros.parameter_descriptions import ParameterValue
 # control.launch.py pinned to controller:=nmpc [+ viz + rviz2, pre-configured
 # to show the planner path and the NMPC's predicted trajectory] + a live
 # matplotlib telemetry GUI (nmpc_telemetry_gui.py). No car / camera / CAN /
-# perception / planning / SLAM — deliberately does NOT include
+# perception / planning / SLAM. It deliberately does NOT include
 # perception.launch.py / slam.launch.py / planning.launch.py / can.launch.py,
-# that absence is the entire point. Watch /fsae/control/cmd_vel react live to
-# the mocked path/pose. NOT a closed-loop plant simulation — see
+# that absence is the entire point. NOT a closed-loop plant simulation, see
 # mock_pose_path_publisher.py.
+#
+# NO COMMAND REACHES ANY VEHICLE. Every node in this launch has
+# /fsae/control/cmd_vel remapped to /fsae/control/nmpc_bench_cmd (and accel_cmd
+# to nmpc_bench_accel_cmd), which no bridge listens to. So even if ack_to_can or
+# a car stack happens to be running on the same ROS network, the bench NMPC
+# cannot drive it. Watch /fsae/control/nmpc_bench_cmd for the command.
 #
 # One command gets the whole bench running, no separate terminals needed:
 #   ros2 launch fsae_bringup nmpc_bench.launch.py use_viz:=true
@@ -73,6 +78,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'nmpc_publish_telemetry_enabled', default_value=LaunchConfiguration('use_gui')),
 
+        GroupAction([
+        SetRemap(src='/fsae/control/cmd_vel', dst='/fsae/control/nmpc_bench_cmd'),
+        SetRemap(src='/fsae/control/accel_cmd', dst='/fsae/control/nmpc_bench_accel_cmd'),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'control.launch.py')),
             launch_arguments={
@@ -146,4 +154,5 @@ def generate_launch_description():
             output='screen',
             condition=IfCondition(use_viz),
         ),
+        ]),
     ])

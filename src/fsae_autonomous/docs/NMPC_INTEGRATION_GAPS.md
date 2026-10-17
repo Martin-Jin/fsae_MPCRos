@@ -1,8 +1,11 @@
 # NMPC integration gaps
 
-**This controller is not car-ready. It has never been built, run, or tested against
-real hardware.** The rest of this document is a full inventory of every mismatch found
-while porting it; this section is the short list of why it cannot be driven today.
+**This controller is not car-ready.** It builds and passes its unit tests and the
+hardware-free bench rig on a PC. It has never driven the car. The go-kart steering-only
+ground test is the first hardware run and is still pending. This section is the short
+list of why the car cannot be driven with it today; the rest of the document is the full
+inventory of every mismatch between what the controller needs and what this repo
+provides.
 
 > **Go-kart ground test (branch `feat/mpc_ground_test`):** a steering-only test path exists,
 > see [`NMPC_GOKART_GROUND_TEST.md`](NMPC_GOKART_GROUND_TEST.md). It sidesteps the CAN
@@ -12,69 +15,60 @@ while porting it; this section is the short list of why it cannot be driven toda
 
 ## Critical blockers (read this before anything else)
 
-1. **Never built or run.** No colcon build, no bag replay, no bench test has happened
-   against this code. It has been reviewed and syntax/import-checked, nothing more.
+1. **Never run on hardware.** No bag replay, no on-car or on-kart run has happened. The
+   evidence so far is unit tests, a scripted node test and the open-loop bench rig.
 2. **The CAN command path is physically disconnected.** `candapter_node` (the node that
-   opens the actual CANdapter USB-serial device onto the car's CAN bus) is commented out
-   in `common/fsae_bringup/launch/can.launch.py`, deliberately, as a standing safety
-   default — see the comment there. Nothing published by any controller (Stanley or
-   this NMPC) reaches the vehicle until someone re-enables it **at the car, with the
-   adapter physically connected**. This is a manual, presence-gated step, not something
-   to flip on from a repo change (gap B8).
-3. **There is no active braking, at all, anywhere in this repo.** A negative `a_cmd`
-   from the NMPC is never sent to the car as a brake command — it is converted into a
-   *lower requested speed* (`v_cmd = clip(car_speed + a_cmd * horizon, 0, v_max)`, gap
-   B3) because the CAN frame has no working negative-acceleration field (`ack_to_can.py`
-   rejects it outright, gap B1/B2). "Braking" today means asking for less speed and
-   hoping the car coasts down in time — there is no confirmation anywhere in this repo
-   that the vehicle can actually decelerate on demand. The cone-proximity emergency stop
-   (gap 4 in the phase list) sets `v_cmd = 0.0` for exactly this reason, and that is the
-   full extent of the car's ability to "brake" through this controller.
-4. **No real speed, yaw-rate, or lateral-velocity sensor exists on the car.** The NMPC's
-   model needs all three every tick; today `v_x` falls back through an unfilled topic to
-   1 m/s-resolution CAN data to the controller's own last commanded speed (open-loop),
-   `v_y` is hardcoded `0.0`, and yaw rate is a one-tick-delayed finite difference of
-   noisy visual odometry (gaps A1-A3). Feeding a nonlinear vehicle model wrong slip
-   angles at real cornering speed is a materially different, and materially worse,
-   failure mode than Stanley being wrong — Stanley has no model to be wrong about.
+   opens the CANdapter USB-serial device onto the car's CAN bus) is commented out in
+   `common/fsae_bringup/launch/can.launch.py` as a standing safety default, see the
+   comment there. Nothing published by any controller (Stanley or this NMPC) reaches the
+   vehicle until someone re-enables it **at the car, with the adapter physically
+   connected**. This is a manual, presence-gated step, not a repo change (gap B8).
+3. **There is no active braking anywhere in this repo.** A negative `a_cmd` from the
+   NMPC is never sent as a brake command. It becomes a *lower requested speed*
+   (`v_cmd = clip(car_speed + a_cmd * horizon, 0, v_max)`, gap B3), because the CAN frame
+   has no working negative-acceleration field (`ack_to_can.py` rejects it, gaps B1/B2).
+   "Braking" today means asking for less speed and relying on the car to coast down. The
+   cone-proximity emergency stop sets `v_cmd = 0.0` for the same reason, and that is the
+   full extent of braking through this controller.
+4. **The car has no speed, yaw-rate or lateral-velocity sensor wired in.** The model
+   needs all three every tick. On the car (default topics) `v_x` falls back through an
+   unfilled topic to 1 m/s-resolution CAN data to the controller's own last commanded
+   speed (open loop), `v_y` is `0.0`, and yaw rate is a one-tick-delayed finite
+   difference of the pose (gaps A1-A3). Wrong slip angles fed into a nonlinear vehicle
+   model are a worse failure mode than Stanley being wrong, since Stanley has no model.
 5. **A rejected CAN frame silently latches the previous command instead of stopping the
-   car.** `ack_to_can.py` drops the whole message and keeps transmitting whatever was
-   sent last tick on any out-of-range field. This is worked around on the publishing
-   side (clamping, finite-value guards, an explicit safe-stop command) but the
-   underlying CAN-bridge behavior itself is unchanged and is the single most dangerous
-   failure mode in the chain (gap B6).
-6. **Every physical parameter and every tuned weight describes the FSDS simulated car,
-   not this vehicle** — wheelbase, mass, yaw inertia, tyre stiffness, max accel/brake,
-   and all ~56 Q/R weights (gap group D). The one FSDS-specific artifact that was
-   correctable in software (`alat_ceiling`) has been disabled; nothing else has been
-   re-measured or re-validated against the real chassis.
-7. **The yaw convention is unverified.** Stanley's own code carries an unresolved
-   warning that its yaw-frame correction is "almost certainly wrong" since the camera
-   initialization changed, and it has never been re-tested. A wrong yaw sign is far more
-   consequential fed into a model-based controller than into Stanley's simple loop
-   (gap A5).
+   car.** `ack_to_can.py` drops the whole message on any out-of-range field and the bus
+   keeps the last frame. The NMPC node works around this on the publishing side
+   (clamping, finite-value guards, an explicit safe-stop command), but the CAN-bridge
+   behaviour itself is unchanged and remains the most dangerous failure mode in the
+   chain (gap B6).
+6. **Every physical parameter and every weight comes from a simulated vehicle.**
+   Wheelbase, mass, yaw inertia, tyre stiffness, max accel/brake and all Q/R weights were
+   set and tuned in simulation (gap group D). UNVERIFIED on the car or kart. The kart
+   launch overrides the geometry it has measured; the car has no overrides at all.
+7. **The yaw convention is unverified on the car.** `stanley_controller.py` carries an
+   unresolved warning that its `-4.71` yaw correction is "almost certainly WRONG" since
+   the camera initialisation changed. A wrong yaw sign is more consequential in a
+   model-based controller than in Stanley's simple loop (gap A5).
 
-None of the above is fixed by this port — each is documented, and several are worked
-around defensively (clamping, safe-stop fallbacks, a documented fallback ladder) so nothing
-here fails silently. But "handled defensively" is not the same as "safe to drive." The
-recommended order to close these is in this document's final section; the bring-up ladder
-in the accompanying plan does not skip any of rungs 1-4 before attempting real driving.
+None of the above is fixed. Each is documented, and several are worked around
+defensively (clamping, safe-stop fallbacks, a fallback ladder for the state) so nothing
+fails silently. "Handled defensively" is not "safe to drive". The order to close these is
+in the final section; the [bring-up ladder](#bring-up-ladder-for-the-car) does not skip
+any rung before real driving.
 
 ---
 
-The nonlinear MPC controller (`control/fsae_control/fsae_control/mpc/nmpc_core.py`,
-ported from the sim tree's `fsae_planning` repo) needs six things about the car every
-tick that this repo did not previously produce, plus one thing it cannot cleanly send.
-This document lists every mismatch found while porting it, how each one is handled in
-the port, and what closing it properly would take. Code carries a one-line
-`# GAP <id>:` comment at each affected line; this document is the full explanation, not
-the comment.
+The NMPC controller (`control/fsae_control/fsae_control/mpc/nmpc_core.py`, ROS node
+`nmpc_controller.py`) needs six things about the car every tick that this repo did not
+previously produce, plus one thing it cannot cleanly send. Code carries a one-line
+`# GAP <id>:` comment at each affected line; this document is the full explanation.
 
-**Handling key**: *placeholder* = a topic on this repo's naming convention now exists
-and is subscribed/published, but nothing (or only a partial source) produces/consumes
-it yet. *compromise* = a degraded value is computed from what already exists, with no
-change to any other node. *deferred* = documented, not addressed, needs a separate
-piece of work (usually outside `fsae_control`) before it can be closed.
+**Handling key**: *placeholder* = a topic on this repo's naming convention exists and is
+subscribed/published, but nothing (or only a partial source) produces/consumes it yet.
+*compromise* = a degraded value is computed from what already exists, with no change to
+any other node. *deferred* = documented, not addressed, needs separate work (usually
+outside `fsae_control`).
 
 ## Why this exists at all
 
@@ -88,163 +82,144 @@ compute(path, car_pos, car_yaw, car_speed, desired_speed,
 The state vector it builds from these is
 `[s, e_y, e_psi, v_x, v_y, r, delta_act, a_act]` (arc-length position, lateral error,
 heading error, longitudinal speed, lateral speed, yaw rate, and two internally
-integrated actuator lag states). Everything except `path`, `car_pos`, and `car_yaw`
-needed a new source.
+integrated actuator lag states). Everything except `path`, `car_pos` and `car_yaw`
+needed a new source. The model and solver are described in `nmpc_core.py`'s module
+docstring.
 
-For contrast, the existing Stanley controller (`stanley_controller.py`) uses only
-`(x, y, yaw)` from `/fsae/slam/car_position` and a fixed speed parameter, which is why
-none of this was needed before.
+For contrast, Stanley (`stanley_controller.py`) uses only `(x, y, yaw)` from
+`/fsae/slam/car_position` and a fixed speed parameter.
 
 ---
 
-## A — State estimation
+## A: State estimation
 
 | ID | Gap | Handling |
 |---|---|---|
-| A1 | No longitudinal velocity | placeholder + compromise |
+| A1 | No longitudinal velocity sensor | placeholder + compromise |
 | A2 | No lateral velocity | placeholder + compromise |
-| A3 | No yaw rate | placeholder + compromise |
+| A3 | No yaw rate on the car's default topics | placeholder + compromise |
 | A4 | Pose has no timestamp | compromise |
 | A5 | Yaw convention unverified post-camera-frame-fix | compromise, resolve at bring-up |
-| A6 | Pose is raw drifting visual odometry | deferred |
+| A6 | Pose quality on the car is unmeasured | deferred |
 | A7 | Fallback state is not atomic across sources | resolved once A1-A3's placeholder is filled |
 
-### A1 — No longitudinal velocity (`v_x`)
+### A1: No longitudinal velocity (`v_x`)
 
-Nothing in the repo measures the car's own speed today. `/fsae/hardware/curr_vel`
-(`ackermann_msgs/AckermannDriveStamped`) already exists in the repo's topic naming and
-already has two subscribers (`inspection_mission.py`, `sys_status.py`), but **zero
-publishers** — it has simply never been wired to anything. `can_decoder_jnano.py`
-publishes a different topic, `/fsae/hardware/drive_status`, whose speed field is a
-single unshifted CAN byte (1 m/s resolution, no timestamp on the value itself, and the
-decoder's own comment marks it "not sure if this is needed").
+Nothing on the car measures its own speed. `/fsae/hardware/curr_vel`
+(`ackermann_msgs/AckermannDriveStamped`) exists in the repo's topic naming and has two
+subscribers (`inspection_mission.py`, `sys_status.py`), but **zero publishers**.
+`can_decoder_jnano.py` publishes `/fsae/hardware/drive_status`, whose speed field is a
+single unshifted CAN byte (1 m/s resolution, no timestamp on the value, and the decoder's
+own comment marks it "not sure if this is needed").
 
-`v_x` is `x0[3]` in the state vector. It sets both front and rear tyre slip angles,
-the kinematic/dynamic model blend (below 1.0 m/s the plant is pure kinematic, above
-2.5 m/s pure dynamic), and the `e_v` (speed-tracking) cost term. Stanley never needed
-this because it uses the `target_velocity` *parameter* as `v` in its denominator, not a
-measurement.
+`v_x` is `x0[3]`. It sets both tyre slip angles, the kinematic/dynamic model blend
+(pure kinematic below `v_blend_lo`, pure dynamic above `v_blend_hi`) and the `e_v`
+(speed-tracking) cost term.
 
-**Handling**: the node subscribes the placeholder `/fsae/hardware/curr_vel` as the
-preferred source, falls back to `/fsae/hardware/drive_status` (coarse but real) if that
-has no publisher, and falls back to the controller's own last commanded speed
-(effectively open-loop, same assumption Stanley already makes) if neither publishes.
-See `nmpc_controller.py`'s `_resolve_state()`.
+**Handling**, in order of preference (`nmpc_controller.py`'s `_resolve_state()`):
+1. `odom_topic` (`nav_msgs/Odometry`, default `/fsae/slam/car_odom`, no publisher on the
+   car). `odom_velocity_source: twist` reads the twist; `pose_diff` differentiates the
+   stamped pose. The kart launch uses `/zed/zed_node/odom` with `pose_diff`.
+2. `/fsae/hardware/curr_vel` (placeholder).
+3. `/fsae/hardware/drive_status` (coarse but real).
+4. The controller's own last commanded speed (open loop, the same assumption Stanley
+   makes).
 
-**Closing it properly**: wire an actual publisher onto `/fsae/hardware/curr_vel` —
-either MoTeC decoding wheel speed onto a CAN frame `can_decoder` already reads, or a
-dedicated speed sensor. Once that lands, no controller change is needed.
+**Closing it properly**: a real speed source, either wheel speed decoded onto a CAN
+frame `can_decoder` already reads and republished on `/fsae/hardware/curr_vel`, or ZED
+odometry on the car as on the kart (UNVERIFIED as a speed source on either vehicle).
+No controller change is needed.
 
-### A2 — No lateral velocity (`v_y`)
+### A2: No lateral velocity (`v_y`)
 
-No IMU subscription anywhere in the repo, no wheel speed sensors. A previous attempt
-existed (`perception/fsae_camera/velocity/velocity.cpp`, IMU-accel integration) but it
-is **not in the CMake build glob** and its own comment reads
+No wheel-speed sensors and no lateral-velocity estimator exist. A previous attempt
+(`perception/fsae_camera/velocity/velocity.cpp`, IMU-accel integration) is **not in the
+CMake build glob** and its own comment reads
 `### THIS DOES NOT OUTPUT ACCURATE VELOCITY DATA ###`.
 
-`v_y` is `x0[4]`. The sim-side node's own docstring warns against collapsing `(v_x,
-v_y)` into a single `hypot()` speed, because that silently drops the `vy*cos(e_psi)`
-term the error-state derivative needs.
+`v_y` is `x0[4]`. It must not be folded into a single `hypot()` speed, because that drops
+the `vy*cos(e_psi)` term the error-state derivative needs.
 
-**Handling**: placeholder `/fsae/slam/car_odom` (`nav_msgs/Odometry`, see below) is the
-only source; with no publisher, `v_y` defaults to `0.0`. This is not a neutral
-approximation, but the plant model's own kinematic/dynamic blend already assumes
-`v_y ~ 0` at low speed (below `v_blend_lo = 1.0 m/s` it is pure kinematic), so the
-error is smallest exactly where bring-up testing runs and grows with speed. This is the
-reason the bring-up ladder (see the plan) caps speed until `car_odom` is real.
+**Handling**: the odometry twist is the only source, and only with
+`use_measured_vy: true`. Otherwise `v_y` is `0.0`. This is not neutral, but the model is
+pure kinematic (which assumes `v_y ~ 0`) below `v_blend_lo`, so the error is smallest at
+bring-up speeds and grows with speed. This is why the bring-up ladder caps speed until a
+real `v_y` source exists.
 
-**Closing it properly**: publish `nav_msgs/Odometry` with a real lateral-velocity
-estimate on `/fsae/slam/car_odom` — from an IMU, from the ZED's own VIO twist (see A3),
-or from a dedicated state estimator.
+**Closing it properly**: an odometry message with a trusted lateral-velocity estimate,
+from an IMU-based estimator or a validated ZED twist.
 
-### A3 — No yaw rate (`r`)
+### A3: No yaw rate (`r`) on the car's default topics
 
-The ZED wrapper *does* publish a full twist on `/zed/zed_node/odom`
-(`nav_msgs/Odometry`), but `cone_detection_node` only subscribes
-`/zed/zed_node/pose` (`geometry_msgs/PoseStamped`) and keeps just x, y, and yaw.
+`r` is `x0[5]` and drives `e_psi_dot = r - kappa*s_dot`, the path-curvature coupling
+that lets the NMPC turn in before error builds.
 
-`r` is `x0[5]` and drives `e_psi_dot = r - kappa*s_dot` — the term whose *absence* from
-the older LTV bicycle model is the documented reason the NMPC was built in the first
-place (see the sim tree's `docs/reference/control_mechanisms.md`).
+**Handling**, in order of preference:
+1. `imu_topic` (`sensor_msgs/Imu`, default off). `angular_velocity.z` times
+   `imu_yaw_rate_sign`. The kart launch uses `/zed/zed_node/imu/data`.
+2. The odometry-derived rate from `odom_topic`.
+3. A finite difference of the pose's yaw across the 20 Hz tick with a light low-pass
+   filter. Noisy and one tick delayed: enough to run at low speed, not a permanent
+   source. Telemetry tags it so a run on this estimate can be told apart.
 
-**Handling**: placeholder `/fsae/slam/car_odom`, same topic as A2. With no publisher,
-`r` is estimated by finite-differencing the pose's own yaw across the 20 Hz control
-tick, with a light low-pass filter. This is noisy and one tick delayed — adequate to
-get the node solving and driving at low speed, not adequate as a permanent source.
-`nmpc_controller.py` tags this estimate in telemetry so a live run can be told apart
-from one using a real yaw rate.
+**Closing it properly**: on the car, set `imu_topic` and `odom_topic` to the ZED wrapper
+topics as the kart launch does, after checking their signs (see the kart checklist's
+sensor checks). UNVERIFIED on the car.
 
-**Closing it properly**: the ZED wrapper's odom twist is already available on
-`/zed/zed_node/odom` and already carries `angular.z`. The straightforward fix is a
-node that republishes that (and the wrapper's linear twist, for A1/A2) onto
-`/fsae/slam/car_odom` in the repo's existing `car_position`-style contract. That work
-was deliberately **not** done as part of this port — it is perception-owned work, not
-a controller concern, and is recorded here rather than built speculatively.
+### A4: Pose has no timestamp
 
-### A4 — Pose has no timestamp
+`/fsae/slam/car_position` is `geometry_msgs/Pose`, not `PoseStamped`. Without a stamp,
+`pose_age_s` (how stale the pose is when the controller acts on it) is unavailable, and
+the delay-compensation rollforward cannot use a real age.
 
-`/fsae/slam/car_position` is `geometry_msgs/Pose`, not `PoseStamped`. Without a
-timestamp, `pose_age_s` (how stale the pose is by the time the controller acts on it)
-is unavailable, and `delay_compensation_enabled`'s nonlinear state rollforward cannot
-run.
+**Handling (compromise)**: the node stamps the pose with its own **arrival time**. This
+under-counts staleness by the perception and SLAM latency.
 
-**Handling (compromise)**: the node stamps the pose with its own **arrival time** the
-moment the subscription callback fires. This under-counts staleness by however long
-the perception pipeline itself took to produce the message, but is otherwise a normal,
-if approximate, `pose_age_s`. No message or upstream node changes.
+**Closing it properly**: change `/fsae/slam/car_position` to `PoseStamped` carrying the
+camera's capture-time stamp (as `/fsae/perception/cone_detection` already does). Out of
+scope here, since Stanley and every planner consume the unstamped message.
 
-**Closing it properly**: change `/fsae/slam/car_position` to `PoseStamped` with the
-camera's own capture-time stamp (as `/fsae/perception/cone_detection` already carries,
-per `cone_detection.cpp`'s `header.stamp = msg->header.stamp`). Out of scope here since
-Stanley and both planners consume the unstamped message today.
+### A5: Yaw convention unverified
 
-### A5 — Yaw convention unverified
+Yaw is packed into `orientation.w` of the `Pose` message (a repo-wide convention).
+`stanley_controller.py`'s in-file warning says its `-4.71` (~270°) yaw offset was tuned
+for the ZED's old coordinate frame, that the ZED init has since changed to
+`RIGHT_HANDED_Z_UP_X_FWD`, and that the constant is now "almost certainly WRONG".
 
-Yaw is packed into `orientation.w` of the `Pose` message (a repo-wide convention, not
-NMPC-specific). `stanley_controller.py`'s own in-file warning says its `-4.71`
-(~270°) yaw-offset correction was tuned for the ZED's *old*, pre-fix coordinate frame,
-that the ZED init has since changed to `RIGHT_HANDED_Z_UP_X_FWD`, and that the
-constant is now "almost certainly WRONG" — untested, left unchanged because it could
-not be tested at the time.
+A wrong yaw convention matters more here than for Stanley: Stanley's cross-track term
+still corrects a wrong heading over a few ticks, while a 90° yaw error fed into the
+NMPC's model corrupts every slip-angle and tyre-force calculation immediately.
 
-A wrong yaw convention is far more consequential for a model-based controller than for
-Stanley: Stanley's cross-track term still corrects a wrong heading over a few ticks,
-while a 90° yaw error fed into the NMPC's plant model corrupts every slip-angle and
-tyre-force calculation immediately.
+**Handling**: the NMPC reads the same `orientation.w` convention as Stanley and the
+planners, with no offset. **Resolve on the rig, not in code**: bring-up rung 2 (wheels
+off the ground, steering only) checks the yaw sign and any offset against the physical
+steering direction before any driving. On the kart this is step 5 of the
+[bring-up checklist](NMPC_GOKART_BRINGUP_CHECKLIST.md).
 
-**Handling**: the NMPC node reads the same `orientation.w` convention Stanley and the
-planners already use, unmodified — no new assumption. **This is resolved on the rig**,
-not in code: bring-up rung 2 (jacked up, steering only) is specifically where the yaw
-sign and any residual offset get verified against physical steering direction before
-any driving is attempted.
+### A6: Pose quality on the car is unmeasured
 
-### A6 — Pose is raw drifting visual odometry
+`cone_landmark_mapper` corrects ZED visual-odometry drift against a cone-landmark pose
+graph and publishes the corrected pose on `/fsae/slam/car_position`. The pose can step
+when the graph re-optimises. `e_y`/`e_psi` inherit any pose noise or step directly into a
+rate-weighted cost term.
 
-`area_memory: false` on the ZED wrapper, no loop closure, `cone_mapper` is
-mapping-only with no pose correction feeding back, and `base_tf` publishes an
-identity `map -> odom` placeholder transform. The Frenet frame's `s0` (arc-length
-position) is path-relative, so slow VO drift is partly self-correcting there, but
-`e_y`/`e_psi` inherit VO noise directly into a rate-weighted cost term.
+**Handling**: deferred; the controller does not change localisation. Pose noise and step
+size on the car are UNVERIFIED. Recorded so an odd tracking-error pattern is not
+misattributed to the controller.
 
-**Handling**: deferred. Nothing in this port changes localisation. Recorded so a
-future odd tracking-error pattern is not misattributed to the controller.
+### A7: Fallback state is not atomic
 
-### A7 — Fallback state is not atomic
+Each A1-A3 fallback source can arrive from a different node at a different rate. Mixing a
+pose from time *t* with a yaw-rate estimate from *t - 40 ms* injects a phantom slip angle.
 
-Each A1-A3 fallback source can arrive from a different node at a different rate;
-mixing a pose from time *t* with a yaw-rate estimate from *t - 40ms* injects a
-phantom slip angle that isn't physically present. The sim tree's `sim_perception.py`
-exists specifically to avoid this, bundling all six state quantities into one 20 Hz
-snapshot published together.
-
-**Handling**: this resolves itself the moment `/fsae/slam/car_odom` gets a real
-publisher, since `nav_msgs/Odometry` carries pose and twist in one message from one
-instant. Until then, the fallback ladder in `_resolve_state()` is a known,
-documented approximation, not a hidden one.
+**Handling**: resolved for the pose and twist when one `nav_msgs/Odometry` source feeds
+`odom_topic`, since it carries both from one instant. The IMU and the SLAM pose still
+arrive separately. Until then the fallback ladder in `_resolve_state()` is a documented
+approximation.
 
 ---
 
-## B — Actuation and command interface
+## B: Actuation and command interface
 
 | ID | Gap | Handling |
 |---|---|---|
@@ -256,311 +231,262 @@ documented approximation, not a hidden one.
 | B6 | An out-of-range command silently latches the last one | worked around, publish-side |
 | B7 | `jerk`/`steering_angle_velocity` must be in [0,1] | handled, zeroed explicitly |
 | B8 | CAN bridge to hardware is currently disconnected | prerequisite, not done here |
-| B9 | `fs_msgs` (FSDS-only) is not a dependency of this repo | removed from the port |
 | B10 | No command mux / e-stop gate on `cmd_vel` | deferred, recommended follow-up |
 
-### B1 — No acceleration command channel
+### B1: No acceleration command channel
 
-The NMPC's second control output is a signed acceleration in m/s² (range roughly
-−7 … +12 in the sim tuning). The CAN frame (`0x300`) has a byte nominally meant for
-`acceleration`, but `ack_to_can.py`'s parser (`ackermann_to_can_parser`) requires
-`0 <= acceleration <= 255` and returns `None` — dropping the whole message — for
-anything outside that range. **Braking (negative acceleration) is therefore rejected
-outright**, and it is unconfirmed whether MoTeC even consumes that byte today.
+The NMPC's second output is a signed acceleration in m/s², bounded by `MAX_ACCEL` and
+`MAX_BRAKE` in `control_limits.py` (see D3). The CAN frame (`0x300`) has a byte nominally
+for `acceleration`, but `ack_to_can.py`'s parser (`ackermann_to_can_parser`) requires
+`0 <= acceleration <= 255` and returns `None` (dropping the whole message) otherwise.
+**Braking (negative acceleration) is therefore rejected**, and it is unconfirmed whether
+MoTeC consumes that byte at all.
 
-**Handling**: a new placeholder topic, `/fsae/control/accel_cmd`
-(`ackermann_msgs/AckermannDriveStamped`, `.drive.acceleration` carries the signed
-value), is published alongside `cmd_vel` so the raw command is not silently thrown
-away. Nothing consumes it yet. It exists so a future MoTeC channel, or a revised
-`ack_to_can`, has something to read directly instead of the lossy speed-integration
-compromise below.
+**Handling**: a placeholder topic, `/fsae/control/accel_cmd`
+(`ackermann_msgs/AckermannDriveStamped`, signed value in `.drive.acceleration`), is
+published alongside the command so the value is not discarded. Nothing consumes it yet.
 
 **Closing it properly**: confirm with whoever owns the MoTeC configuration which CAN
-byte(s), if any, the ECU actually reads for acceleration/torque, and update
-`ack_to_can.py` to accept a signed range and forward it. That is a CAN-bridge change,
-explicitly out of scope for this port (`ack_to_can.py` is untouched).
+byte(s), if any, the ECU reads for acceleration/torque, and update `ack_to_can.py` to
+accept a signed range and forward it.
 
-### B2 — Speed command is 1 m/s integer-quantised
+### B2: Speed command is 1 m/s integer-quantised
 
-`ack_to_can.py:191` does `int(speed)` into a single byte with no scaling — 1 m/s
-resolution, anything below 1.0 m/s transmits as 0, negative values are rejected before
-reaching that line. The NMPC's longitudinal loop resolves far finer than this.
+`ack_to_can.py` does `int(speed)` into a single byte with no scaling: 1 m/s resolution,
+anything below 1.0 m/s transmits as 0, negative values are rejected. The NMPC's
+longitudinal loop resolves far finer than this.
 
-**Handling**: deferred, documented. Not addressed by this port; `ack_to_can.py` is
-untouched. Bring-up rung 3 (low speed, straight line) is specifically where this
-quantisation's effect on tracking is characterised.
+**Handling**: deferred; `ack_to_can.py` is untouched. Bring-up rung 3 (low speed,
+straight line) is where this quantisation's effect on tracking gets characterised.
 
-### B3 — NMPC emits no speed target itself
+### B3: NMPC emits no speed target itself
 
-The NMPC returns a raw or normalised acceleration command, not a speed. On the sim
-side, `fsds_bridge.py` closes that loop (integrating acceleration into a simulator
-speed command); **that module does not exist in this repo** and was not ported (it is
-FSDS-specific).
+The NMPC returns an acceleration, not a speed, and the CAN frame carries a speed.
 
-**Handling (compromise, the one genuinely new piece of control logic in this port)**:
-`_publish_command()` integrates the commanded acceleration forward over a short fixed
-horizon to get a speed the CAN frame can actually carry:
+**Handling (compromise)**: `_publish_command()` integrates the commanded acceleration
+over a short fixed horizon:
 
 ```
-v_cmd = clip(v_meas + a_cmd * ACCEL_TO_SPEED_HORIZON_S, 0.0, v_max)
+v_cmd = clip(v_meas + a_cmd * accel_to_speed_horizon_s, 0.0, v_max)
 ```
 
-`ACCEL_TO_SPEED_HORIZON_S` starts at `0.25 s` as a declared ROS2 parameter (not a
-literal), and is expected to need tuning on the rig — it is not derived from anything
-already validated, unlike the rest of the ported weights.
+`accel_to_speed_horizon_s` defaults to `0.25 s` (a ROS parameter). It is not derived
+from any measurement and needs tuning on the car. UNVERIFIED.
 
-### B4 — Steering limit mismatch (25° vs 30°)
+### B4: Steering limit mismatch (25° vs 30°)
 
-Three different numbers currently describe the car's steering limit, none verified
-against the physical rack: the NMPC's `control_limits.MAX_STEER_RAD` is
-`radians(25.0)` (used for output normalisation inside the solver), the repo's
-`max_steer_angle` parameter is `30.0` degrees, and `ack_to_can.py` hard-rejects
-anything outside `±30`.
+Three numbers describe the car's steering limit, none verified against the physical
+rack: `control_limits.MAX_STEER_RAD` is `radians(25.0)` (output normalisation inside the
+solver, a simulation value, UNVERIFIED), the repo's `max_steer_angle` parameter is
+`30.0` degrees, and `ack_to_can.py` hard-rejects anything outside `±30`.
 
-**Handling (compromise)**: `_publish_command()` clamps to
-`min(25.0, max_steer_angle)` before publishing — the tighter of the two — so the
-solver's own internal limit and the published command are never inconsistent with
-each other, and the published value can never exceed what `ack_to_can` accepts (see
-B6 for why that second property specifically matters).
+**Handling (compromise)**: `_publish_command()` clamps to `min(25.0, max_steer_angle)`,
+so the solver's limit and the published command agree, and the command can never exceed
+what `ack_to_can` accepts (see B6). `plant_max_steer_deg` overrides the solver's limit
+(the kart checklist measures it).
 
-**Closing it properly**: measure the physical rack's actual maximum steering angle and
-make all three numbers agree.
+**Closing it properly**: measure the rack's maximum steering angle and make all three
+numbers agree.
 
-### B5 — Steering command resolution is 0.25°
+### B5: Steering command resolution is 0.25°
 
-`ack_to_can.py` encodes `steering_angle * 4` into a single sign-magnitude byte
-(one bit sign, 7 bits magnitude), i.e. 0.25° steps. The sim-side anti-chatter tuning
-(`nmpc_steer_rate_anti_hunt_enabled`, the corner-blend rate weights) was validated
-assuming continuous steering output.
+`ack_to_can.py` encodes `steering_angle * 4` into one sign-magnitude byte (1 sign bit,
+7 magnitude bits), i.e. 0.25° steps. The anti-chatter settings
+(`nmpc_steer_rate_anti_hunt_enabled`, the corner-blend rate weights) were tuned in
+simulation against continuous steering output. UNVERIFIED with a quantised actuator.
 
-**Handling**: deferred, documented. Watch for chatter attributable to this
-quantisation specifically (a period matching the byte's LSB) versus chatter from an
-actual tuning issue, during bring-up.
+**Handling**: deferred. During bring-up, tell chatter at the byte's LSB apart from
+chatter caused by tuning.
 
-### B6 — An out-of-range command silently latches the previous one
+### B6: An out-of-range command silently latches the previous one
 
 `AckToCan_publish_callback` only publishes when `ackermann_to_can_parser()` returns
-non-`None`; on any rejected field it returns `None` and the callback publishes
-**nothing at all**, leaving the CAN bus holding whatever frame was sent last tick.
-This is a real hazard paired with a solver that has a documented divergent failure
-mode (a "wrong-way full-lock ramp" from one failed subproblem, per the sim tree's
-`docs/reference/control_mechanisms.md`): a single NaN or out-of-range tick from the
-NMPC would not stop the car, it would freeze the *previous* steering command.
+non-`None`; on any rejected field it publishes **nothing**, leaving the bus holding the
+last frame. Paired with an iterative solver that can fail on a single tick, one NaN or
+out-of-range tick would freeze the *previous* steering command rather than stop the car.
 
-**Handling**: worked around entirely on the publishing side, without touching
-`ack_to_can.py`:
-- every field is clamped to `ack_to_can`'s accepted range **before** publish (B4
-  above is one instance of this generally),
-- a finite/NaN guard runs on every field; on failure the node publishes an explicit
-  safe command (speed 0, steer 0) rather than skipping the publish,
-- `compute()` itself is wrapped in try/except onto that same safe command,
+**Handling**: worked around on the publishing side, without touching `ack_to_can.py`:
+- every field is clamped to `ack_to_can`'s accepted range **before** publish (B4 is one
+  instance),
+- a finite/NaN guard runs on every field; on failure the node publishes an explicit safe
+  command (speed 0, steer 0) rather than skipping the publish,
+- `compute()` is wrapped in try/except onto the same safe command,
 - a watchdog latches the safe command if no successful solve has published within a
   small number of ticks.
 
-**Closing it properly**: `ack_to_can.py` publishing a zeroed/safe frame on parse
-failure instead of silently dropping would remove the need for this workaround
-entirely, and would protect every other `cmd_vel` publisher (teleop, inspection,
-mock) too. Recorded as a recommendation, not made — it is a CAN-bridge change and
-touches a shared safety path used by every command source, not something to change
-as a side effect of adding one new controller.
+**Closing it properly**: `ack_to_can.py` publishing a zeroed/safe frame on parse failure
+instead of dropping it. That protects every other `cmd_vel` publisher (teleop,
+inspection, mock) too. Recorded as a recommendation; it touches a shared safety path used
+by every command source.
 
-### B7 — `jerk`/`steering_angle_velocity` must be in [0, 1]
+### B7: `jerk`/`steering_angle_velocity` must be in [0, 1]
 
-Same parser: both fields are range-checked to `[0, 1]` and the whole message is
-dropped otherwise.
+Same parser: both fields are range-checked to `[0, 1]` and the message is dropped
+otherwise.
 
-**Handling**: `_publish_command()` sets both explicitly to `0.0`, exactly as
-`stanley_controller.py` already does.
+**Handling**: `_publish_command()` sets both to `0.0`, as `stanley_controller.py` does.
 
-### B8 — CAN bridge to hardware is currently disconnected
+### B8: CAN bridge to hardware is currently disconnected
 
 `candapter_node` is commented out in `common/fsae_bringup/launch/can.launch.py`, so
-`/fsae/hardware/can_tx` has no subscriber and `/fsae/hardware/can_rx` has no
-publisher — the command path is severed at the hardware boundary today, independent
-of anything in this port.
+`/fsae/hardware/can_tx` has no subscriber and `/fsae/hardware/can_rx` has no publisher.
 
-**Handling**: recorded as a prerequisite for on-car testing. Not re-enabled as part
-of this change (that is a decision about live hardware access, not a controller
-change) — see the plan's bring-up ladder, rung 1 explicitly runs with it disabled.
+**Handling**: a prerequisite for on-car testing, not re-enabled here (a decision about
+live hardware access). Bring-up rung 1 runs with it disabled.
 
-### B9 — `fs_msgs` (FSDS-only) is not a dependency of this repo
+### B10: No command mux / e-stop gate on `cmd_vel`
 
-The sim-side node defaults to `standalone_output=True`, publishing
-`fs_msgs/ControlCommand` to `/fsds/control_command` and subscribing
-`fs_msgs/GoSignal`. `fs_msgs` is an FSDS-simulator-only message package and is not a
-dependency anywhere in `fsae_autonomous`.
+Four nodes already publish `/fsae/control/cmd_vel` (Stanley, `joystick_teleop`,
+`inspection_mission_node`, `mock_stimulus`) with no arbitration; safety rests on
+launching only one at a time. A fifth publisher behind a nonlinear solver raises the
+cost of that assumption failing.
 
-**Handling**: removed from the port outright, not merely defaulted off — a
-default-off parameter still imports the message type at module load and would fail
-immediately. `nmpc_controller.py` publishes only `/fsae/control/cmd_vel` (and the new
-`/fsae/control/accel_cmd` placeholder from B1).
-
-### B10 — No command mux / e-stop gate on `cmd_vel`
-
-Four nodes already publish `/fsae/control/cmd_vel` today (Stanley, `joystick_teleop`,
-`inspection_mission_node`, `mock_stimulus`) with no arbitration; safety currently
-rests entirely on launching only one of them at a time. Adding a fifth publisher
-behind a nonlinear solver increases the cost of that assumption being violated.
-
-**Handling**: deferred. The node's own safe-command fallback (see B6) protects
-against *this* controller's own failures, but does nothing about two controllers
-being launched simultaneously. A real mux/e-stop gate is recommended as a follow-up
-applying to the whole command layer, not built here.
+**Handling**: deferred. The node's safe-command fallback (B6) covers this controller's
+own failures, not two controllers running at once. A mux/e-stop gate for the whole
+command layer is the recommended follow-up.
 
 ---
 
-## C — Planning and reference
+## C: Planning and reference
 
 | ID | Gap | Handling |
 |---|---|---|
 | C1 | No speed profile from planning | compromise (curvature-based fallback) |
-| C2 | No track data in the repo | deferred |
+| C2 | No recorded track | not supported |
 | C3 | Path carries positions only | none needed |
 | C4 | Path publish rate is variable and gated | documented |
-| C5 | SLAM map resets fully every 60 frames | documented |
+| C5 | Path can change discontinuously | documented |
 | C6 | Path has no meaningful timestamp | compromise |
-| C7 | Path direction/order is not guaranteed | new lightweight check |
+| C7 | Path direction/order is not guaranteed | direction check |
 
-### C1 — No speed profile from planning
+### C1: No speed profile from planning
 
-Planning publishes geometry only (`geometry_msgs/PoseArray`, positions with no
-heading, curvature, or speed). Target speed today is the single static
-`target_velocity` parameter (`8.0` m/s). The sim side's `map_path` /
-`speed_profile.csv` / `precomputed_speed_at()` machinery has nothing to load from in
-this repo.
+Planning publishes geometry only (`geometry_msgs/PoseArray`, positions with no heading,
+curvature or speed).
 
-**Handling (compromise)**: `curvature_speed()` + `dynamic_speed_cap()`, ported
-verbatim in `control_utils.py`, derive a target speed from the live path's own shape
-every tick — this is exactly the sim tree's "live-planner mode" and needs no track
-files at all.
+**Handling (compromise)**: `curvature_speed()` in `control_utils.py` derives a target
+speed from the live path's shape every tick, between `v_min` and `v_max`. The
+curvature-to-speed mapping is untuned for either vehicle. UNVERIFIED.
 
-### C2 — No track data in the repo
+### C2: No recorded track
 
-There is no `tracks/` directory, no `cone_map.json`, no `centerline.csv`, no CSV of
-any kind in `fsae_autonomous`. The sim-tree finding that switching the tracked line
-from a raceline to a plain centreline cut steering reversals from 13 to 1 cannot be
-reproduced here, because there is no raceline/centreline artifact to compare.
+There is no recorded path or speed-profile file in this repo.
 
-**Handling**: deferred. `load_speed_profile_csv` / `load_path_profile_csv` /
-`load_path_heading_profile_csv` are ported (in `control_utils.py`, for file-parity
-with the sim side) but are inert — nothing calls them yet, and `path_map_path` /
-`map_path` parameters have no file to point at.
+**Handling**: not supported. The NMPC node has no parameter for a precomputed path or
+speed profile and always follows the live planner path. The CSV loaders in
+`control_utils.py` (`load_speed_profile_csv`, `load_path_profile_csv`,
+`load_path_heading_profile_csv`) are unused by the NMPC.
 
-### C3 — Path carries positions only
+### C3: Path carries positions only
 
-No heading, curvature, or speed per point. **No action needed**: `PathReference`
-(inside `nmpc_core.py`) derives arc length, heading, and curvature itself via a
-`CubicSpline` fit over the raw `(x, y)` points. This was true on the sim side too
-before any track CSVs existed.
+**No action needed**: `PathReference` (inside `nmpc_core.py`) derives arc length,
+heading and curvature itself from a `CubicSpline` fit over the raw `(x, y)` points.
 
-### C4 — Path publish rate is variable and gated
+### C4: Path publish rate is variable and gated
 
-The planner has no timer of its own; it runs directly from the pose-callback (see
-`centerline_planner.py`'s `set_car_position` → `self.loop()`), so path updates arrive
-at camera frame rate, not a fixed rate. Compounding this, `cone_detection.cpp`
-(line ~567) only publishes cone detections when **both** boundary colours are visible
-in frame, so the path stops updating entirely whenever one boundary temporarily
-leaves the camera's field of view.
+The planner has no timer of its own; it runs from the pose callback (see
+`centerline_planner.py`'s `set_car_position` → `self.loop()`), so path updates arrive at
+pose rate. `cone_detection.cpp` only publishes detections when **both** boundary colours
+are in frame, so the path can stop updating when one boundary leaves the camera's view.
 
-**Handling**: the NMPC node's own 20 Hz timer decouples solving from path arrival —
-it always solves against the most recent path it has. `PATH_TIMEOUT`-based stale-path
-braking (ported unchanged) will likely fire more often here than it does on the sim
-track. Documented so a spike in that specific brake event is not mistaken for a
-controller problem.
+**Handling**: the NMPC's own 20 Hz timer decouples solving from path arrival; it solves
+against the most recent path. `PATH_TIMEOUT` (0.5 s) safe-stops on a stale path. How
+often that fires on the car is UNVERIFIED; a spike in that event is a planning-input
+problem, not a controller one.
 
-### C5 — SLAM map resets fully every 60 frames
+### C5: Path can change discontinuously
 
-`cone_mapper.py`'s `reset_map()` fires every `reset_count` (default 60) frames,
-discarding the whole accumulated cone map and starting over. The published path
-therefore changes discontinuously every few seconds of driving — something the sim
-tree's static or continuously-built paths never exercise.
+`cone_landmark_mapper` re-optimises its landmark positions as cones are re-observed, so
+the boundaries the planner builds from, and hence the path, can shift between updates.
 
-**Handling**: documented, not fixed (this is a SLAM design decision, out of scope for
-a controller port). Effects to watch for in telemetry at bring-up rung 4: the path's
+**Handling**: documented, not changed. Watch telemetry at bring-up rung 4 for the
 `PathReference.signature` changing (forcing a spline rebuild), `s0` jumping, and the
-solver's warm start becoming briefly stale right after a reset.
+solver's warm start going briefly stale after a jump. Size and frequency on the car are
+UNVERIFIED.
 
-### C6 — Path has no meaningful timestamp
+### C6: Path has no meaningful timestamp
 
-Same shape as A4: the `PoseArray` isn't independently timestamped in a way the
-controller can rely on for `path_age_s`. **Handling (compromise)**: arrival time,
-same as A4.
+Same shape as A4: the `PoseArray` is not timestamped in a way the controller can rely on
+for `path_age_s`. **Handling (compromise)**: arrival time, as in A4.
 
-### C7 — Path direction/order is not guaranteed
+### C7: Path direction/order is not guaranteed
 
-Nothing guarantees the published path starts near the car's current position and
-runs in the direction of travel — this is a particular risk from the FaSTTUBe-based
-planners. `PathReference.project()` finds the nearest waypoint by `argmin` and then
-does a perpendicular projection; a reversed or wrapped-around path produces a
-wrong-signed `e_y`, which the controller would act on as if it were correct.
+Nothing guarantees the published path starts near the car and runs in the direction of
+travel, a particular risk with the FaSTTUBe-based planners. `PathReference.project()`
+finds the nearest waypoint by `argmin`, then projects perpendicularly; a reversed or
+wrapped-around path gives a wrong-signed `e_y` that the controller would act on.
 
-**Handling**: a small, new, path-direction sanity check in `nmpc_controller.py`
-(compares the path's initial tangent against the car's current heading; on a large
-mismatch it brakes rather than steers). This is genuinely new code, not a port,
-because nothing in the sim tree needed it (its planners are trusted to emit a
-forward-ordered path).
+**Handling**: a path-direction check in `nmpc_controller.py` compares the path's initial
+tangent with the car's heading; on a large mismatch it safe-stops rather than steers.
 
 ---
 
-## D — Vehicle model and physical parameters
+## D: Vehicle model and physical parameters
 
-Every constant below is copied unchanged from the sim-side plant model
-(`nmpc_core.py`'s `_Plant` dataclass) and describes the **FSDS simulated car**, not
-the physical vehicle. None of this is placeholder-able the way a topic is; it is a
-straightforward "measure it before trusting the output" list.
+The defaults in `nmpc_core.py`'s `_Plant` dataclass describe a **simulated vehicle**, not
+the car or the kart. This is a "measure it before trusting the output" list. The node's
+`plant_*` parameters override `lf`, `lr`, `v_blend_lo`, `v_blend_hi`, `tau_delta` and the
+steering limit; `m`, `Iz`, `Cf`, `Cr` have no override parameter.
 
 | ID | Gap |
 |---|---|
-| D1 | `lf=0.70, lr=0.85, m=255.0, Iz=150.0, Cf=29155.5, Cr=19512.3, tau_delta=0.08, tau_a=0.02` are all FSDS values. The real vehicle is a kart/trolley chassis (see `gocartv1.urdf.xml` / `trolly.urdf.xml`) with a documented 1.0 m camera-to-front-axle offset, inconsistent with the 1.55 m wheelbase implied above. None of these have been measured on the real car. |
-| D2 | `nmpc_alat_ceiling_enabled` defaults `True`. This models an FSDS-simulator artifact (a sustained ~7.5 m/s² lateral-acceleration clamp the simulator itself imposes), not real vehicle physics. **Must be set `false`** for any real-vehicle use — leaving it on would impose a fictitious yaw-restoring moment on the real car. |
-| D3 | `MAX_ACCEL = 12.0`, `MAX_BRAKE = 7.0` (in `control_limits.py`) are FSDS capabilities. The real car's are unmeasured and near-certainly lower. |
-| D4 | `tau_delta = 0.08 s` is the FSDS simulated steering actuator lag. The NMPC integrates its own internal `delta_act` state from this constant and never reads back an actual measured steering angle, even though `can_decoder_jnano.py` does decode one onto `/fsae/hardware/drive_status`. |
-| D5 | All roughly 56 tuned MPC/NMPC weights (`Q`/`R`/`R_rate`, adaptive-gain shape constants) were tuned against the FSDS plant on one specific recorded track. Per this project's own standing finding, the offline simulator does not yet fully predict even FSDS's own live behaviour (documented steering-saturation gap: 4.8% offline vs 21.1% live), so these weights should be treated as an untested starting point on the real car, not a validated set. |
+| D1 | `lf=0.70, lr=0.85, m=255.0, Iz=150.0, Cf=29155.5, Cr=19512.3, tau_delta=0.08, tau_a=0.02` are simulation values, UNVERIFIED on the car or kart. The car has no measured values. The kart launch sets `plant_lr` 0.14 (taped) and `plant_lf` 0.86 (from a CAD-only 1.00 m wheelbase, UNVERIFIED), and runs the kinematic model below 8 m/s so the tyre constants do not apply there. |
+| D2 | `nmpc_alat_ceiling_enabled` is an optional model of a sustained lateral-acceleration limit that was measured in simulation. It is not known to exist on any real vehicle (UNVERIFIED). The dataclass default is `True`; `fsae_params.yaml` sets it `false`. **Keep it `false`** for real-vehicle use, or the model adds a yaw-restoring moment that may not exist. |
+| D3 | `MAX_ACCEL = 12.0`, `MAX_BRAKE = 7.0` (`control_limits.py`) are simulation values, UNVERIFIED and likely higher than either vehicle can do. |
+| D4 | `tau_delta = 0.08 s` (steering actuator lag) is a simulation value, UNVERIFIED. The NMPC integrates its own internal `delta_act` from it and never reads a measured steering angle, although `can_decoder_jnano.py` decodes one onto `/fsae/hardware/drive_status`. |
+| D5 | All `Q`/`R`/`R_rate` weights and adaptive-gain constants in `mpc_params.py`/`nmpc_params.py` were tuned in simulation on one track. UNVERIFIED on the car or kart; treat them as a starting point, not a validated set. |
 
 ---
 
-## E — Compute and dependencies
+## E: Compute and solver settings
 
 | ID | Gap |
 |---|---|
-| E1 | `osqp` was declared nowhere in this repo before this port (now added to `requirements.txt` and noted in `fsae_control/package.xml` as pip-only, matching the sim tree's convention for the same dependency). `scipy` was similarly undeclared as a rosdep for `fsae_control` specifically — added as `python3-scipy`, needed for `scipy.sparse` and `scipy.interpolate.CubicSpline` inside `nmpc_core.py`. |
-| E2 | Solve-time budget is unvalidated on the target hardware. The sim tree measured 9.1 ms mean / 12.4 ms p95 per solve at the shipped horizon length (N=20) on a desktop; the SQP, its Jacobians, and the QP condensing are pure-Python numpy with no compiled/generated solver. Whether `nmpc_solve_budget_ms = 25.0` (half the 50 ms control period) holds on the actual Jetson is unknown until measured there. **This gap is now more load-bearing**: `nmpc_jac_substeps` was raised from 1 to 4 (see `nmpc_params.py`'s own field docstring, and `fsae_MPCTest/docs/logs/nmpc_low_speed_accel_stall_investigation.md`) to fix a confirmed low-speed (below ~6.5-7 m/s) numerical instability that froze steering/accel output at exactly zero; the fix's own measured cost on a desktop is mean solve time 9.56ms→18.63ms, **p95 23.61ms, max 38.86ms** against the 25ms budget — closer to the deadline than before, not just unmeasured on target. |
-| E3 | Nothing upstream of the controller runs at a fixed rate (perception is camera-rate, SLAM is detection-rate, planning is pose-rate — see C4), so in practice the controller will routinely solve against a pose and a path that are each some ticks old, more often than the sim tree's more uniform pipeline does. |
-| E4 | **Resolved.** `nmpc_jac_substeps=4` alone did not close a residual dead zone at roughly 2.3-3.2 m/s (exact zero steering/accel, `nmpc_status`=solve-failed). Root cause: `nmpc_rk_substeps` (the *prediction rollout's* own RK4 substep count, a separate parameter from `nmpc_jac_substeps`) was still at its old default of 2, which is RK4-unstable across this same band (the (v_y, r) sub-dynamics' 1/v_x stiffness corrupts the *predicted trajectory* itself, not just the QP's step direction, so every line-search candidate scores worse than doing nothing and the solver freezes). Fixed by raising `nmpc_rk_substeps` to 4 as well — see `nmpc_params.py`'s own field docstring and `fsae_MPCTest/docs/logs/nmpc_low_speed_accel_stall_investigation.md`. Verified: full 2.0-4.5 m/s sweep now gives real, correctly-signed, monotonic output with `nmpc_status=1.0` throughout. **Also caught by this investigation**: `fsae_params.yaml` (all three trees) was still overriding `nmpc_jac_substeps` back to 1 at ROS2 parameter load time, meaning the earlier `nmpc_jac_substeps=1→4` fix (see this gap's own prior entry, and `nmpc_jac_substeps`'s field docstring) was never actually live until this fix's YAML update — a runtime override silently superseding a dataclass default, exactly the failure mode this file's own "Development practices" section warns about. |
-| E5 | **Resolved.** `nmpc_solve_budget_ms` was a structural no-op at the shipped `nmpc_sqp_iters=1`: the only budget check sat before `_solve_step()` at the top of the outer SQP loop, so at one iteration it could only refuse to start that single iteration, never interrupt the Jacobian build or the backtracking line search that follows (each backtracking trial re-rolls out the full horizon, the dominant source of per-tick time variance). Confirmed live the budget was exceeded on 87.4% of ticks with zero effect from the check. Fixed by adding a second check inside the backtracking loop (`nmpc_core.py`'s `compute()`), gated on `_bt > 0` so the always-run first trial is untouched and only additional halvings are truncated once the budget is already blown. This targets tail latency (worst-case per-tick solve time), not typical-case cost, and does **not** address why solve time rose in the first place (the substep costs from E4/`nmpc_jac_substeps`), nor is it a fix for the separately-reported low-frequency steering "hunting" symptom (0.7-1.2 Hz oscillation) observed after the E4 fix — a live measurement directly ruled out solve-time/tick-delay as that symptom's driver (mean tick-to-tick steering change is ~0.86-0.92° regardless of whether a tick was on-time or delayed past 70ms), so the hunting's cause remains open and untouched by this change. |
-| E6 | **Resolved.** The E4 fix (`nmpc_rk_substeps` 2→4) raised solve time enough that, combined with E5's new backtracking-budget check, ticks in corners were disproportionately budget-truncated before a corrective retry could run: live A/B (same track, `nmpc_rk_substeps` fixed at 4, only `nmpc_jac_substeps` varied) showed the rejected-tick rate jump from 1.1% (`jac_substeps=1`) to 14.2% (`jac_substeps=4`), with 100% of `jac_substeps=4`'s rejections landing over budget versus 32% at `jac_substeps=1` — the fix's own extra cost was starving its own retries. Rejection streaks ran up to 13 ticks, letting tracking error build open-loop until the next accepted tick snap-corrected it in one 3-6° jump; that snap-correct was a live-reported low-frequency steering "wobble" (reversal rate 2.49%→3.21%, mean tick-to-tick steering change 0.601°→0.956° in the A/B). Fixed by speed-gating both `nmpc_jac_substeps` (`nmpc_jac_gate_speed`/`nmpc_jac_substeps_fast`) and `nmpc_rk_substeps` (`nmpc_rk_gate_speed`/`nmpc_rk_substeps_fast`) independently: each substep count only needs to be at its full (safe) value below its own measured instability envelope, and both envelopes are confined to low speed, not the whole operating range. The Jacobian's envelope (measured via `max\|A_k\|` against the converged value) stays elevated to ~8 m/s; the rollout's own envelope (measured via infinitesimal-perturbation growth through `_rollout` itself, not just the Jacobian) converges earlier, by ~3.75-4 m/s, so `nmpc_rk_gate_speed` opens sooner than `nmpc_jac_gate_speed`. Live-validated: same track, gated config vs both prior ungated configs, rejected-tick rate fell to 0.32% (lower than either prior extreme), reversal rate and mean tick-to-tick steering change both landed between the two, closer to the good end. **Also corrected in this pass**: `nmpc_rk_substeps`'s own docstring previously claimed 3 substeps still fails at 2.50 m/s exactly; a direct re-measurement (the same perturbation-growth test, all 8 states individually perturbed, several control-sequence shapes) found 3 fully stable (≤1.6x growth) everywhere tested in and around that band, and the original claim's basis could not be reproduced — `nmpc_rk_substeps_fast=3` relies on this corrected measurement, not the original one. |
-| E7 | **Resolved (the steering pre-load; the yaw excursion itself was a separate mechanism, see E8).** The car veers sideways during a standing start, just before the controller corrects back. Root cause (reproduced offline, confirmed against a live 3 m/s flat-profile run): while the car is stationary the NMPC ramps its steering command to roughly -6.8 degrees over the ~1 s before the car physically moves, so it launches already turned. This is not a numerical defect. At `v_x = 0` steering has no effect (`r_kin = v_x*tan(d)/L = 0`, dynamic branch blended out by the already-fixed `F_yf`/`F_yr` `blend` scaling), but `_cost` is one scalar summed over the whole horizon and the rolled-out `v_x` profile leaves zero by stage 1 (`[0, 0.118, 0.294, 0.465, ...]`), so the optimiser pre-commits `U[0]` toward whatever helps the later, physically-active stages. Nothing in the objective distinguished "cannot act yet" from "will act soon". Fixed by `nmpc_standstill_steer_damp_enabled` (**default True as of 2026-09-15**, was off during initial validation), which scales stage 0's steering-effort weight by `nmpc_standstill_steer_r_scale` (**200x**, raised from an initial 20x) while the MEASURED speed is below `nmpc_standstill_speed` (0.5 m/s); stage 0 only, because every later stage can genuinely act, and `U[0]` is the only element shipped to the car. `nmpc_standstill_fade_speed` (default 3.0 m/s) ramps the multiplier linearly back to 1x between `nmpc_standstill_speed` and that speed, instead of releasing it in one tick, which is what caused a sustained -2 deg/tick steering run immediately after a hard release at the first tuning pass. **Live result**: peak stationary steer 6.91 -> 0.91 deg, per-tick steering change through the fade band 1.77 -> 1.00 deg/tick, whole-run `\|e_y\|` mean 0.490 -> 0.387 m. Flag-off is bit-identical to before. **Eliminating the pre-load did not by itself fix the launch yaw excursion** (11.42 -> 11.12 deg, within noise) — that turned out to be a separate mechanism in the speed target, not the steering command; see E8. |
-| E8 | **Resolved.** The launch yaw excursion left unexplained by E7 traced to `SPEED_TARGET_RISE_RATE` (7.0 m/s^2, the cap on how fast the commanded speed TARGET may rise): it assumes the car can accelerate at that rate, which is false from a standing start — the car does not break static friction for ~1 s, so the target ramps to ~7 m/s while the car is still stationary and banks a deficit it then spends the next second chasing (measured live: `v_desired` 7.35 m/s at t=1.00s against `v_actual` 0.00, car first moves at t=1.05s). `_cost` is one scalar over the whole horizon, so a speed error that large swamps the lateral term and the optimiser trades `e_y` away for speed it was never going to get — the same "one scalar, wrong stage-0 tradeoff" structure as E7, but acting through the speed term instead of the steering term. Fixed by capping the DEFICIT the ramp may open up (`SPEED_TARGET_DEFICIT_MAX = 2.5` m/s, `mpc_controller.py`/`nmpc_controller.py`/`sim/rollout_core.py`): once `desired_speed - car_speed` exceeds this, the ramp holds rather than continuing to climb. A naive gate of the form "hold the target while v_actual is near zero" was considered and rejected: it deadlocks (no target -> no speed error -> no throttle -> car never moves -> gate never opens). Holding at `car_speed + DEFICIT_MAX` (never below the previous target) avoids this: a real speed error always remains, so throttle still commands and the ramp resumes on its own as the car closes the gap. Not launch-specific — the same rule stops the target running away after a spin or a heavy brake. **Live result**: peak launch deficit 7.35 -> 2.80 m/s, peak steering in the first 2 s of launch 12.97 -> 1.92 deg, yaw_rate held at 0.000 until the car actually moves. Offline `recorded_map_rollout` A/B (2.5 m/s cap vs uncapped, no DNF either side): \|e_psi\| mean 2.37 -> 2.29 deg, a_lat max 7.53 -> 7.37, a_lat > ceiling 0.10% -> 0.00%, reversals/s 0.41 -> 0.35. **Still open**: `SPEED_TARGET_DEFICIT_MAX` is a module constant, not an `NMPCParams`/`MPCParams` field, so it has no launch-arg override in `launch_all.sh`; promote it if it needs live tuning. The separate ~1s static-friction delay before the car moves at all is unaddressed by this change (and is plant behaviour, not a bug to fix here). |
-| E6 | **Resolved (the E5 hunting mechanism).** A controlled live A/B (same track, back-to-back, `nmpc_rk_substeps=4` fixed both runs, only `nmpc_jac_substeps` varied 1 vs 4) confirmed E5's hunting symptom is directly caused by `nmpc_jac_substeps=4` interacting with E5's own budget-check fix: `nmpc_jac_substeps=4` roughly doubles `_jacobians` cost (measured 3.54ms → 15.51ms), pushing most ticks over the 25ms budget, especially in corners (rejected ticks carry 65% higher mean curvature than accepted ones). At jac=4, **100% of rejected (`nmpc_status=0`) ticks are over budget** versus 32% at jac=1, and E5's `_bt > 0` check then denies the retry that would otherwise recover from a first-trial overshoot — rejection streaks run up to 13 ticks, letting tracking error accumulate open-loop until the next accepted tick snap-corrects it in one 3-6 degree jump. That snap is the wobble. Reversal rate 2.49%→3.21% and mean tick-to-tick steering change 0.601°→0.956° (prefix-matched, same track) confirm the effect directly. Fixed by speed-gating `nmpc_jac_substeps` (new fields `nmpc_jac_gate_speed`=8.0, `nmpc_jac_substeps_fast`=2): the instability that required 4 substeps is confined to low speed (measured max\|A_k\| sensitivity 2.41e2 at 2.5 m/s vs 4.06 at 8 m/s vs 4.01 at 14 m/s, js=1 vs the converged js=4 value), and the wobble's own reversal cluster sits at mean 13.3 m/s, squarely in the region where 2 substeps tracks the converged 4-substep value closely (3.07 vs 3.18 at 8 m/s) with no divergence. Measured `_jacobians` cost at 13 m/s: 14.71ms ungated → 7.61ms gated. An analytic Jacobian was considered as an alternative and explicitly deferred: it would not lower the substep floor at all (the sensitivity/variational equation propagated through RK4 shares the nominal ODE's stability region, verified on a scalar test problem — both diverge at the same `lambda*dt`), so its only payoff is a ~3x constant-factor reduction at much higher implementation/verification risk (6+ nonlinear/piecewise constructs across 8 states and 2 inputs, in the file CLAUDE.md itself flags as highest-risk). See `nmpc_params.py`'s `nmpc_jac_gate_speed`/`nmpc_jac_substeps_fast` docstrings for the full measured envelope. |
+| E1 | `osqp` is pip-only (`requirements.txt`, noted in `fsae_control/package.xml`). `scipy` is a rosdep (`python3-scipy`), needed for `scipy.sparse` and `scipy.interpolate.CubicSpline` in `nmpc_core.py`. |
+| E2 | Solve time is unmeasured on the Jetson. The SQP, its Jacobians and the QP condensing are pure-Python numpy with no generated solver. On a desktop at N=20 with 4 Jacobian and 4 rollout substeps at every speed (the low-speed setting in E4, without its speed gate), mean solve time was about 19 ms, p95 about 24 ms, max about 39 ms, against `nmpc_solve_budget_ms = 25.0` (half the 50 ms tick). The Jetson is expected to be slower. UNVERIFIED on target; measure `solve_ms` in telemetry on the first run. |
+| E3 | Nothing upstream of the controller runs at a fixed rate (perception is camera rate, SLAM is detection rate, planning is pose rate, see C4), so the controller often solves against a pose and a path that are each some ticks old. |
+| E4 | Integration substeps are speed-gated to avoid a low-speed numerical instability that freezes the output at zero: `nmpc_rk_substeps` 4 below `nmpc_rk_gate_speed` (4.0 m/s), 3 above; `nmpc_jac_substeps` 4 below `nmpc_jac_gate_speed` (8.0 m/s), 2 above. The envelopes come from the simulation vehicle's dynamics; UNVERIFIED with the kart's or car's own `plant_*` values. `nmpc_params.py`'s field docstrings describe each setting. |
+| E5 | `nmpc_solve_budget_ms` is checked inside the backtracking line search as well as before each SQP iteration, so it truncates extra line-search halvings once the budget is spent. It bounds tail latency, not typical cost. |
+| E6 | The speed-target ramp holds once `desired_speed - car_speed` exceeds `SPEED_TARGET_DEFICIT_MAX` (2.5 m/s, a module constant in `nmpc_controller.py`), so the target cannot run away while the car is stationary or recovering. The value was tuned in simulation; UNVERIFIED. It has no ROS parameter, so promote it if it needs tuning on the car. |
+| E7 | `nmpc_standstill_steer_damp_enabled` (default on) raises stage-0 steering effort cost by `nmpc_standstill_steer_r_scale` below `nmpc_standstill_speed`, fading out by `nmpc_standstill_fade_speed`, so the controller does not pre-load steering before the car moves. Values tuned in simulation; UNVERIFIED. |
 
 ---
 
-## F — Instrumentation and validation
+## F: Instrumentation and validation
 
 | ID | Gap |
 |---|---|
-| F1 | No telemetry infrastructure exists in this repo (no `telemetry_logger.py`, no `scoring.py`, no `fsae_logs/` equivalent). Without per-tick logging there is no way to diagnose a live NMPC failure after the fact, or to compare a live run against an offline rollout the way the sim tree does. Also: this repo has no stated log-retention policy for whatever logging is eventually added here, mirroring the same open gap already noted for the outer FSDS repo's `fsae_logs/`. |
-| F2 | No offline self-consistency check exists here yet. The sim tree's `nmpc_offline_check.py` treats its `_step_scalar == _step` numerical-parity assertion (agreement to 1e-12 between the scalar fast-path integrator and the vectorised one) as "not optional," because a silent divergence between the two is a silent wrong-prediction bug that nothing else would catch. |
-| F3 | Even once telemetry exists, scoring would stay permanently partial: the composite score's lap-progress term needs a speed profile to compute an optimal-time integral against (see C1/C2), which this repo has no source for. Any score computed here should be read as partial, not comparable to a sim-side score, until C2 is resolved. |
+| F1 | No per-tick log to disk exists. With `nmpc_publish_telemetry_enabled:=true` the node publishes its per-tick telemetry as JSON on `/fsae/viz/nmpc_telemetry`; record that topic with `ros2 bag record` to diagnose a run after the fact. No log-retention policy exists for bags. |
+| F2 | Solver self-consistency (scalar vs vectorised rollout, Jacobians, SQP convergence) is covered by `control/fsae_control/test/test_nmpc_core_math.py`. Keep it passing after any change to `nmpc_core.py`. |
 
 ---
 
-## Summary: what would fully close every gap here
+## Bring-up ladder for the car
+
+1. **Rung 1, no actuation**: full stack running with `candapter_node` disabled (B8).
+   Check every input topic and the command on `/fsae/control/cmd_vel`.
+2. **Rung 2, wheels off the ground, steering only**: verify the steering sign and yaw
+   convention (A5) and the steering limit (B4).
+3. **Rung 3, low speed, straight line**: characterise speed quantisation (B2) and the
+   accel-to-speed horizon (B3).
+4. **Rung 4, low-speed driving with SLAM and planning**: watch path jumps (C5), stale-path
+   stops (C4) and solve time (E2). Raise speed only once a real `v_y` source exists (A2).
+
+The kart follows its own steering-only version of rungs 1-2 in
+[`NMPC_GOKART_BRINGUP_CHECKLIST.md`](NMPC_GOKART_BRINGUP_CHECKLIST.md).
+
+## Summary: what would close every gap here
 
 In rough priority order, since several gate the others:
 
-1. Confirm what the physical vehicle's steering limit, wheelbase, mass, and yaw
-   inertia actually are (D1, D3, B4) — cheapest to get and gates trusting anything
-   else.
-2. Get a real publisher onto `/fsae/hardware/curr_vel` or `/fsae/slam/car_odom`
-   (A1-A3, A7) — the single biggest fidelity improvement available, and turns three
-   compromises off in one step.
-3. Re-enable `candapter_node` (B8) so anything below can be tested against real
-   hardware at all.
-4. Decide, with whoever owns the MoTeC configuration, whether an acceleration/torque
-   channel exists or can be added (B1, B2) — removes the least-validated new code in
-   this port (the `ACCEL_TO_SPEED_HORIZON_S` integration).
-5. `ack_to_can.py` failing safe instead of latching on a rejected frame (B6) — small,
-   protects every command source in the repo, not just this one.
-6. Record a track (any track) once this repo has a working perception+SLAM+planning
-   run, to close C2 and unblock F3.
+1. Measure the car's steering limit, wheelbase, mass and yaw inertia (D1, D3, B4).
+   Cheapest to get, and gates trusting anything else.
+2. Get a real speed and yaw-rate source onto `odom_topic`/`imu_topic` or
+   `/fsae/hardware/curr_vel` (A1-A3, A7). The biggest fidelity improvement available.
+3. Re-enable `candapter_node` (B8) so anything below can be tested on hardware.
+4. Decide with whoever owns the MoTeC configuration whether an acceleration/torque
+   channel exists or can be added (B1, B2). This removes the least-validated logic in
+   the node (the `accel_to_speed_horizon_s` integration).
+5. Make `ack_to_can.py` fail safe instead of latching on a rejected frame (B6). Small,
+   and protects every command source.
+6. Measure solve time on the Jetson (E2) and retune the weights on the vehicle (D5).

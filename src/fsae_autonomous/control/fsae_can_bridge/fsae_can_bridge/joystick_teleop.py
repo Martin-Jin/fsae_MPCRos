@@ -100,7 +100,7 @@ class JoystickTeleop(Node):
                 ('button_auto_steer', -1),
                 ('auto_steer_timeout', 0.3),     # s; an older NMPC command counts as lost
                 # +1 if +S steers LEFT, -1 if +S steers RIGHT. The NMPC is + = LEFT. On the
-                # kart +S steers RIGHT (measured 2026-10-14, matches invert_steer: true), so
+                # kart +S steers RIGHT (measured, matches invert_steer: true), so
                 # nmpc_gokart.launch.py passes -1. The ECU firmware comment (+S = left) is wrong
                 # for this kart.
                 ('auto_steer_sign', 1.0),

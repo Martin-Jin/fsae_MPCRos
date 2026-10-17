@@ -1,5 +1,5 @@
 """
-test_nmpc_core_math.py — numerical self-consistency checks for the NMPC solver
+test_nmpc_core_math.py: numerical self-consistency checks for the NMPC solver
 (fsae_control.mpc.nmpc_core).
 
 WHAT THIS TESTS
@@ -7,28 +7,25 @@ WHAT THIS TESTS
 These are NOT behavioral tests (see test_nmpc_signs_magnitudes.py for those).
 This file checks that the solver's internal MATH is not silently wrong:
 
-    1. MODEL PARITY  — the scalar rollout fast path (_step_scalar, used for
+    1. MODEL PARITY: the scalar rollout fast path (_step_scalar, used for
        the sequential horizon rollout) must agree with the vectorised _step
        (used for the finite-difference Jacobians) to machine precision. They
        are hand-mirrored copies of one model; a divergence here is a
        silent-wrong-prediction bug that no behavioral test would catch,
        because both copies would be consistently wrong the same way.
-    2. JACOBIANS — the forward finite differences the SQP actually uses vs.
+    2. JACOBIANS: the forward finite differences the SQP uses vs.
        central differences at a larger step, to catch a badly-sized
        perturbation or a non-smooth term.
-    3. SQP CONVERGENCE — cost must decrease monotonically to a plateau from
+    3. SQP CONVERGENCE: cost must decrease monotonically to a plateau from
        a cold start, at several representative operating points.
-    4. FRENET ROUND-TRIP — PathReference.xy_at() (used only to convert the
+    4. FRENET ROUND-TRIP: PathReference.xy_at() (used only to convert the
        predicted horizon to Cartesian for RViz visualisation) must exactly
        invert project() (used every tick to measure e_y/e_psi); a mismatch
        would mean the visualised prediction doesn't describe the same
-       geometry the solver actually predicted against.
+       geometry the solver predicted against.
 
-Ported from the sim tree's fsae_planning/control/fsae_control/test/
-nmpc_offline_check.py (checks 1-3 of 6). Checks 4-6 of that file are NOT
-ported here: they compare against fsae_control.mpc.mpc_core.MPCController
-(the LTV-QP controller) and/or fsae_MPCTest's Pacejka plant, neither of
-which this repo carries (this repo is NMPC-only — see
+Comparisons against the LTV-QP controller or a Pacejka-tyre plant are not
+included: this repo carries neither (it is NMPC-only, see
 docs/NMPC_INTEGRATION_GAPS.md and control_limits.py's docstring for why).
 
 HOW TO RUN

@@ -1,9 +1,9 @@
 """
-test_nmpc_signs_magnitudes.py — behavioral contract tests for NMPCController
+test_nmpc_signs_magnitudes.py: behavioral contract tests for NMPCController
 (fsae_control.mpc.nmpc_core), calling compute() directly with hand-built
 paths and car states standing in for what nmpc_controller.py (the ROS2
 node) would normally supply from /fsae/planning/selected_trajectory and
-/fsae/slam/car_position (+ its state fallback ladder — see
+/fsae/slam/car_position (+ its state fallback ladder, see
 _resolve_state() in nmpc_controller.py and docs/NMPC_INTEGRATION_GAPS.md
 gaps A1-A3).
 
@@ -11,8 +11,8 @@ WHAT THIS TESTS
 ----------------
 Like the pre-existing test_mpc_controller.py this repo already had for the
 earlier LTV-QP controller, this intentionally does NOT lock exact numeric
-output values tick-by-tick — the controller is a numerical optimizer with
-offline-tuned weights, and exact outputs are an implementation detail that
+output values tick-by-tick: the controller is a numerical optimizer with
+weights tuned in simulation, and exact outputs are an implementation detail that
 can shift slightly with solver/tuning changes. Instead each test checks a
 SIGN or a MAGNITUDE RELATIONSHIP that must hold for the controller to be
 doing something sensible:
@@ -61,9 +61,10 @@ DT = 0.05
 
 
 def make_controller(**nmpc_kw) -> NMPCController:
-    """Fresh controller per test. alat_ceiling off -- it models an FSDS
-    simulator artifact (see docs/NMPC_INTEGRATION_GAPS.md gap D2), not
-    something these plant-agnostic sign/magnitude checks should depend on."""
+    """Fresh controller per test. alat_ceiling off: it models a lateral-
+    acceleration limit measured only in simulation (see
+    docs/NMPC_INTEGRATION_GAPS.md gap D2), not something these
+    plant-agnostic sign/magnitude checks should depend on."""
     npar = NMPCParams(nmpc_alat_ceiling_enabled=False, **nmpc_kw)
     return NMPCController(dt=DT, params=MPCParams(), nmpc=npar)
 
@@ -186,16 +187,12 @@ def test_steer_sign_corrects_heading_error(yaw_offset_deg, expected_sign):
 def test_steer_sign_matches_corner_direction(direction, expected_sign):
     """Car dead on-line, sitting right at a known bend's own entry, well
     within the horizon's reach (v * N * dt) -- must plan steering toward
-    the bend's own direction, not away from it or zero (see
-    nmpc_offline_check.py's TURN-IN check on the sim side for the
-    structural reason this matters).
+    the bend's own direction, not away from it or zero.
 
     car_speed=8.0 and car_pos placed AT the corner's start (not several
     metres before it) are both deliberate: nmpc_jac_substeps=4's fix for
     the documented low-speed Jacobian instability (see nmpc_params.py's
-    own field docstring and fsae_MPCTest/docs/logs/
-    nmpc_low_speed_accel_stall_investigation.md) leaves two things this
-    test must stay clear of, confirmed by direct investigation --
+    own field docstring) leaves two things this test must stay clear of:
 
     1. A speed=6.0, straight_m=3.0 (car several metres BEFORE the bend)
        version of this test used to pass under the old nmpc_jac_substeps=1
@@ -216,7 +213,7 @@ def test_steer_sign_matches_corner_direction(direction, expected_sign):
        solve status failed) is NOT fixed by nmpc_jac_substeps=4 -- see
        docs/NMPC_INTEGRATION_GAPS.md. car_speed=8.0 is clear of both this
        band and the ~6.5-7 m/s band the substeps fix addresses, so this
-       test only exercises the regime nmpc_jac_substeps=4 actually fixes."""
+       test only exercises the regime nmpc_jac_substeps=4 fixes."""
     ctrl = make_controller()
     straight_m = 15.0
     path = corner_path(direction, straight_m=straight_m, radius=10.0)
@@ -250,17 +247,14 @@ def test_tighter_corner_demands_more_steering_than_gentler_one():
 # Longitudinal: accelerate below target, brake above target
 # ---------------------------------------------------------------------------
 
-# Historical note: this dead zone (car_speed in roughly [2.5, 5.6] m/s giving
-# a_cmd ~= 0 regardless of the speed gap) was root-caused to
-# nmpc_jac_substeps=1 being numerically unstable at low speed -- see
-# nmpc_params.py's own field docstring and fsae_MPCTest/docs/logs/
-# nmpc_low_speed_accel_stall_investigation.md for the full derivation. Fixed
-# by raising nmpc_jac_substeps to 4 (make_controller()'s default,
+# A dead zone (car_speed in roughly [2.5, 5.6] m/s giving a_cmd ~= 0
+# regardless of the speed gap) comes from nmpc_jac_substeps=1 being
+# numerically unstable at low speed, see nmpc_params.py's own field
+# docstring. Avoided by nmpc_jac_substeps=4 (make_controller()'s default,
 # NMPCParams' own default). car_speed=4.0 (used by both tests below) is
 # confirmed clear of the residual narrower dead zone that fix does NOT
-# close (~2.3-3.2 m/s, see docs/NMPC_INTEGRATION_GAPS.md GAP E4) -- both
-# tests now assert real, meaningful, correctly-monotonic behaviour rather
-# than xfail-ing a known-broken accidental pass.
+# close (~2.3-3.2 m/s, see docs/NMPC_INTEGRATION_GAPS.md GAP E4), so both
+# tests assert correctly-monotonic behaviour rather than an accidental pass.
 
 
 def test_accelerates_when_below_target_speed():
@@ -272,8 +266,8 @@ def test_accelerates_when_below_target_speed():
 
 
 def test_brakes_when_above_target_speed():
-    """NOT in the dead zone (car_speed=15, well above it) -- braking from a
-    genuinely moving speed works correctly. See ACCEL_DEAD_ZONE_REASON above:
+    """NOT in the dead zone (car_speed=15, well above it): braking from a
+    moving speed works correctly. See ACCEL_DEAD_ZONE_REASON above:
     this is the case that proves the anomaly is speed-keyed, not a general
     'acceleration is broken' failure."""
     ctrl = make_controller()

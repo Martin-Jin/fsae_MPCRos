@@ -7,7 +7,7 @@ trajectory) plus scrolling e_y/e_psi/steering strip charts and a stat panel.
 WORKS IDENTICALLY IN BENCH AND LIVE MODE. This file subscribes to exactly
 five topics below and does no mock-vs-live branching at all -- possible
 because /fsae/planning/selected_trajectory and /fsae/slam/car_position are
-ALREADY genuinely live-published in the real stack (by the active planner
+ALREADY published in the real stack (by the active planner
 node and cone_detection_node respectively), not mock-only. See
 MPC_NODE_DOCS.md's "Live telemetry GUI" section for the exact launch
 commands in each mode.

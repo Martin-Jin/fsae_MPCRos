@@ -40,6 +40,11 @@ car's initial (y, yaw) from the path's own start pose by a bounded random
 amount (see bench_scenarios.random_start_offset), to bench-test convergence
 from an initial tracking error instead of starting on the path exactly.
 
+END OF PATH: once the scripted along-path distance reaches the path's length,
+the car holds its final pose (position, sweep offset and heading all frozen)
+and the node logs once. It does not loop. The path keeps being published, so
+nmpc_controller keeps solving against a stationary car.
+
 Yaw is held at the path's own local heading (not the sweep's instantaneous
 velocity vector), which would otherwise inject a simultaneously-varying
 e_psi on top of e_y and confound the isolation either scenario relies on.
@@ -148,6 +153,7 @@ class MockPosePathPublisher(Node):
         self.pose_pub = self.create_publisher(Pose, '/fsae/slam/car_position', 10)
 
         self._t0 = self.get_clock().now()
+        self._ended = False
         self.create_timer(1.0 / 20.0, self._tick)  # matches nmpc_controller.py's CONTROL_HZ
         self.get_logger().info(
             f'mock_pose_path_publisher started: scenario={self.scenario}, '
@@ -157,7 +163,13 @@ class MockPosePathPublisher(Node):
 
     def _tick(self) -> None:
         stamp = self.get_clock().now()
-        t = (stamp - self._t0).nanoseconds * 1e-9
+        t, ended = scen.scripted_time(
+            (stamp - self._t0).nanoseconds * 1e-9, self._ref.total, self.forward_speed_mps)
+        if ended and not self._ended:
+            self._ended = True
+            self.get_logger().info(
+                f'End of path reached after {t:.1f} s ({self._ref.total:.1f} m): holding the '
+                'final pose. Restart the launch to run again.')
 
         self.path_pub.publish(self._path_msg)
 

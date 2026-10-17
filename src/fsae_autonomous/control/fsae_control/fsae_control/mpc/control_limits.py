@@ -1,24 +1,19 @@
 """
-Shared physical limits and current-state weight-shaping helpers that
-nmpc_core.py needs from the LTV-QP controller (mpc_core.py) without pulling
-in the LTV-QP controller itself.
+Physical limits and current-state weight-shaping helpers used by
+nmpc_core.py.
 
-fsae_autonomous does not carry mpc_core.py (it needs cvxpy/clarabel, which
-this repo deliberately does not depend on -- osqp alone is enough for the
-NMPC path). These 3 constants and 4 functions are copied verbatim from
-ros2/src/fsae_planning/control/fsae_control/fsae_control/mpc/mpc_core.py
-(the sim-side LTV-QP module) so nmpc_core.py's import surface is unchanged.
-Keep byte-identical with that file's copies -- see CLAUDE.md's
-"Planning/control parity" section. Do not edit the logic here without also
-updating mpc_core.py's copy on the sim side.
+Kept in their own module so the NMPC path depends only on osqp, with no
+cvxpy/clarabel dependency.
 """
 
 import math
 
 import numpy as np
 
-# Maximum physical steering deflection. 25deg matches this stack's limit
-# (fsae_control.control_utils / fsds_bridge); upstream used 35deg.
+# Steering and acceleration limits are defaults from the simulated car model,
+# UNVERIFIED for the real car. The go-kart overrides the steering limit via
+# the node's plant_max_steer_deg parameter (see nmpc_controller.py and
+# docs/NMPC_GOKART_GROUND_TEST.md). 25deg matches control_utils.MAX_STEER_RAD.
 MAX_STEER_RAD: float = math.radians(25.0)
 MAX_ACCEL: float = 12.0
 MAX_BRAKE: float = 7.0
@@ -36,15 +31,14 @@ def _steer_rate_anti_hunt(
     TEMPORARY/EXPERIMENTAL, NOT VALIDATED: heavily penalise steering
     rate-of-change on top of _adaptive_R_rate's existing curvature softening,
     strongest when the car is centred (|e_y| small), well-aligned (|e_psi|
-    small), AND not currently curving (kappa small). Mirrors
-    model_utils.steer_rate_anti_hunt in fsae_MPCTest -- keep both constants
-    in sync. enabled=False returns R_rate_base untouched.
+    small), AND not currently curving (kappa small). enabled=False returns
+    R_rate_base untouched. Constants tuned in simulation; UNVERIFIED on the
+    car or kart.
 
-    Continuous, not a hard AND-gated threshold: a discontinuous step would
-    risk the same QP-solver-iteration-spike problem the
-    enable_in_corners/kappa_straight history above already found from
-    threshold cutoffs on curvature, so straight-line hunting is instead
-    penalised more strongly via a higher continuous ceiling.
+    Continuous, not a hard AND-gated threshold: a discontinuous step on
+    curvature risks spikes in QP solver iterations, so straight-line
+    hunting is instead penalised more strongly via a higher continuous
+    ceiling.
     boost_kappa, boost_ey, and boost_epsi each saturate independently
     toward 1.0 as their input shrinks toward 0 (same saturating-curve style
     as _adaptive_R_rate's own floor); their product is the applied scale,
@@ -60,22 +54,18 @@ def _steer_rate_anti_hunt(
     would get the full straight-line boost anyway, since kappa/e_y alone
     can't distinguish "straight and correctly aligned" from "straight but
     needs to yaw back into line" -- making exactly the correction it needs
-    artificially expensive. k_epsi=23.0 sets half-fade at ~2.5 deg of e_psi.
+    artificially expensive. k_epsi=11.5 sets half-fade at ~5.0 deg of e_psi.
 
     boost_kappa/boost_ey/boost_epsi are current-state signals only (no
     forward-scan term).
     """
     if not enabled:
         return R_rate_base
-    # Relaxed 2026-08-19 (halved from 60.0/30.0/23.0): the original constants
-    # faded the boost out too fast on genuinely gentle curves -- boost_kappa
-    # was already down to ~0.45 by |kappa|=0.02 (a ~50 m-radius bend), so
-    # R_rate[0,0] had mostly relaxed back toward baseline exactly where
-    # residual steering jitter was still visible. Halving each k_* doubles
-    # the |kappa|/|e_y|/|e_psi| each factor reaches before dropping to half
-    # its max contribution (kappa: ~0.017 -> ~0.033 1/m; e_y: ~3.3 -> ~6.7 cm;
-    # e_psi: ~2.5 -> ~5.0 deg). Applies to both controllers -- nmpc_core.py
-    # imports this function verbatim, not a separate copy.
+    # Each k_* sets where its factor drops to half its max contribution
+    # (kappa: ~0.033 1/m, e_y: ~6.7 cm, e_psi: ~5.0 deg). Larger k_* fade the
+    # boost out sooner, which relaxes R_rate[0,0] on gentle bends where
+    # residual steering jitter can still appear. Tuned in simulation;
+    # UNVERIFIED on the car or kart.
     k_kappa, k_ey, k_epsi = 30.0, 15.0, 11.5
     boost_kappa = 1.0 / (1.0 + k_kappa * abs(kappa))
     boost_ey    = 1.0 / (1.0 + k_ey * abs(e_y))
@@ -139,8 +129,7 @@ def _corner_factor(kappa: float, k: float) -> float:
     use). Deliberately the SAME functional shape for both rising (entry)
     and falling (exit) curvature -- no separate decay-distance timer, no
     hysteresis state: this is a pure function of the current instantaneous
-    signal, replacing the whole deleted lookahead approach/exit-boost
-    family. k is MPCParams.corner_factor_k, the curve's sharpness.
+    signal. k is MPCParams.corner_factor_k, the curve's sharpness.
     """
     return 1.0 - 1.0 / (1.0 + k * abs(kappa))
 

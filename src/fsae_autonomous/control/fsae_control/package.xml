@@ -29,8 +29,8 @@
        pip-only (no rosdep key), see requirements.txt. Install once into the
        ROS interpreter: pip install osqp (Ubuntu 24.04: add the
        break-system-packages flag). The Stanley controller (default) has no
-       such dependency; this repo does not carry the LTV-QP controller
-       (mpc_core.py) or its cvxpy/clarabel dependency at all. -->
+       such dependency, and nothing in this package needs cvxpy or
+       clarabel. -->
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

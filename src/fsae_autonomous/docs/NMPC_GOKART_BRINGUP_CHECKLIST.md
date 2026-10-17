@@ -6,7 +6,8 @@ each box. The *why* behind each item is in
 
 **Status:** the code builds and passes its unit tests and a scripted node test on a PC
 (no kart, no sensors). It has **never run on the kart**. Every steering calibration value
-below is a placeholder until step 3 is done.
+below is a placeholder until step 3 is done. The NMPC weights and the vehicle constants
+the launch does not override were tuned in simulation (UNVERIFIED on the kart).
 
 ---
 
@@ -97,7 +98,7 @@ From the table:
 | Sign | +S should turn RIGHT (measured on the Stanley test, 2026-10-14). If +S turns LEFT, use +1 | `auto_steer_sign` | −1.0 |
 | S per wheel degree, left | slope through the origin of the S < 0 rows (S / mean °), up to the lock | `auto_steer_scale_left` | 1.0 |
 | S per wheel degree, right | same for the S > 0 rows | `auto_steer_scale_right` | 1.0 |
-| Steering lock | full lock in wheel degrees, smaller side | `plant_max_steer_deg` | 25.0 |
+| Steering lock | full lock in wheel degrees, smaller side | `plant_max_steer_deg` | 25.0 (simulation vehicle value, UNVERIFIED) |
 | S at lock | the S where the wheels hit the stop, if before ±180 | teleop `max_angle` in `fsae_params.yaml` | 180.0 |
 
 The two sides need separate scales: the firmware maps −180 … 0 onto 1403 µs of servo pulse
@@ -107,12 +108,13 @@ but 0 … +180 onto only 847 µs.
 
 | Value | How | Launch argument | Placeholder now |
 |---|---|---|---|
-| Wheelbase | tape, rear axle centre to front axle centre | `plant_lf` = wheelbase − 0.14 | 0.86 (from a 1.00 m CAD value) |
+| Wheelbase | tape, rear axle centre to front axle centre | `plant_lf` = wheelbase − 0.14 | 0.86 (from a 1.00 m CAD value, UNVERIFIED) |
 | ZED lens ahead of the rear axle | tape; only if the camera mount has moved since 2026-09-30 | `plant_lr` (and the URDF `camera_joint` plus its inverse) | 0.14 |
 
 ### 3c. Optional (later speed work, not needed for this test)
 
-- Steering response time from a step command (sets `plant_tau_delta`, now 0.08 s).
+- Steering response time from a step command (sets `plant_tau_delta`, now 0.08 s, a simulation
+  vehicle value, UNVERIFIED).
 - Throttle % → acceleration, for when the NMPC drives the throttle.
 
 ### 3d. Make the values permanent
@@ -146,6 +148,27 @@ so nothing reaches the servo.
   not 0 and not wildly noisy.
 - [ ] RViz shows the path, the green NMPC predicted path and the steering arrow.
 
+### 4b. Shadow mode before the first NMPC-steered run
+
+- [ ] With the kart driven by something else (the pad, or Stanley), run
+  `ros2 launch fsae_bringup nmpc_shadow.launch.py`. The NMPC publishes only on the unused
+  `/fsae/control/nmpc_shadow_cmd`, so it cannot steer.
+- [ ] The predicted path follows the planner path and the NMPC's arrow turns the same way
+  into bends as the kart. See
+  [`NMPC_VALIDATION_AND_TESTING.md`](NMPC_VALIDATION_AND_TESTING.md#3-shadow-mode-on-the-kart-validate-prediction-nmpc-never-drives).
+- [ ] Stop shadow mode before launching `nmpc_gokart.launch.py`: both start a node named
+  `nmpc_controller`.
+
+### Running over SSH
+
+- RViz and the dashboard need a screen. Over plain SSH, add `use_rviz:=false use_gui:=false`
+  on the Jetson and open them on a laptop on the same network with the same
+  `ROS_DOMAIN_ID` (`rviz2 -d <path to nmpc_gokart.rviz or nmpc_shadow.rviz>`,
+  `ros2 run fsae_control nmpc_telemetry_gui`), or plug a monitor into the Jetson.
+  UNVERIFIED: the bandwidth of ROS traffic over the kart's Wi-Fi.
+- Run the launch inside `tmux` so a dropped SSH session does not kill it. If it does
+  die, frames stop and the ECU watchdog trips its failsafe.
+
 ## 5. First runs
 
 - [ ] **Wheels off the ground, Arduino plugged in.** Do the go handshake with X alone:
@@ -156,7 +179,8 @@ so nothing reaches the servo.
 - [ ] Block the camera or stop the planner: within 0.3 s the steering goes to 0 and the
   throttle is cut.
 - [ ] **On the ground at walking pace**, driver on R2, then build speed slowly. Expect the
-  kart to run slightly wide in tight corners (about 0.5 m on a 6 m radius, offline).
+  kart to run slightly wide in tight corners (about 0.5 m on a 6 m radius in an offline
+  kinematic-model check; UNVERIFIED on the kart).
 
 ## 6. After each session
 

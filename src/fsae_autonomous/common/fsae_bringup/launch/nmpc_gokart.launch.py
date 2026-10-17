@@ -32,11 +32,11 @@ from launch_ros.parameter_descriptions import ParameterValue
 #
 # Vehicle model (plant_* below): the pose on /fsae/slam/car_position is the ZED left lens,
 # 0.14 m ahead of the rear axle (gocartv2.urdf.xml, tape-measured). The wheelbase, 1.00 m,
-# is read off the CAD mesh go_cart_base.stl (tyre contact patches at x = 0.00 and 0.995 m)
-# and has NOT been tape-measured. So lr = 0.14, lf = 1.00 - 0.14 = 0.86.
+# is read off the CAD mesh go_cart_base.stl (tyre contact patches at x = 0.00 and 0.995 m);
+# UNVERIFIED, not tape-measured. So lr = 0.14, lf = 1.00 - 0.14 = 0.86.
 # v_blend_lo/hi are raised so the model stays purely kinematic at ground-test speeds,
-# where it needs only the wheelbase; the tyre constants (m, Iz, Cf, Cr) are still the FSDS
-# car's and are never used below 8 m/s.
+# where it needs only the wheelbase; the tyre constants (m, Iz, Cf, Cr) are the built-in
+# defaults for a simulated car, not the kart's (UNVERIFIED), and are never used below 8 m/s.
 def generate_launch_description():
     launch_dir = os.path.join(get_package_share_directory('fsae_bringup'), 'launch')
     config = os.path.join(get_package_share_directory('fsae_bringup'), 'config', 'fsae_params.yaml')
@@ -67,7 +67,7 @@ def generate_launch_description():
         DeclareLaunchArgument('button_auto_steer', default_value='5',
                               description='Joy button held (with X) for NMPC steering. 5 = R1 on '
                                           'the DS4 under hid-sony; check with ros2 topic echo /joy'),
-        # +S steers RIGHT on the kart (measured 2026-10-14 on the Stanley steering test);
+        # +S steers RIGHT on the kart (measured on the Stanley steering test);
         # the NMPC is + = LEFT, hence -1.
         DeclareLaunchArgument('auto_steer_sign', default_value='-1.0',
                               description='+1 if +S steers left, -1 if +S steers right'),
@@ -102,7 +102,6 @@ def generate_launch_description():
                 'imu_topic': '/zed/zed_node/imu/data',
                 'v_max': float_arg('v_max'),
                 'v_min': float_arg('v_min'),
-                'enable_dynamic_speed_cap': False,
                 'plant_lf': float_arg('plant_lf'),
                 'plant_lr': float_arg('plant_lr'),
                 'plant_v_blend_lo': 8.0,

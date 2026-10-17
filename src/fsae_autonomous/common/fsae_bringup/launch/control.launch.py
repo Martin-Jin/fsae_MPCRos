@@ -15,22 +15,22 @@ from fsae_control.mpc.nmpc_params import NMPC_PARAM_FIELDS
 
 
 # Control subsystem: a path-tracking controller. Publishes /fsae/control/cmd_vel
-# (+ /fsae/control/accel_cmd when controller=nmpc — see mpc/nmpc_controller.py's
+# (+ /fsae/control/accel_cmd when controller=nmpc, see mpc/nmpc_controller.py's
 # module docstring) - this is the autonomous command source (see can.launch.py
 # for the CAN bridge that consumes it).
 #
-# Selectable with `controller:=stanley|nmpc`, DEFAULT stanley — launching this
+# Selectable with `controller:=stanley|nmpc`, DEFAULT stanley: launching this
 # node is opt-in, and controller:=stanley reproduces exactly today's launch
-# behaviour with no change. controller:=nmpc runs the ported nonlinear MPC
+# behaviour with no change. controller:=nmpc runs the nonlinear MPC
 # (mpc/nmpc_controller.py); see docs/NMPC_INTEGRATION_GAPS.md before using it
-# on the car — several of its inputs (v_x/v_y/yaw_rate) have no real sensor
+# on the car: several of its inputs (v_x/v_y/yaw_rate) have no real sensor
 # source in this repo yet and fall back to a documented degraded estimate.
 def generate_launch_description():
     config = os.path.join(get_package_share_directory('fsae_bringup'), 'config', 'fsae_params.yaml')
     controller = LaunchConfiguration('controller')
 
-    # Every MPCParams/NMPCParams field, generated from the same field-metadata
-    # tuples the sim tree's control.launch.py uses, so this file, the
+    # Every MPCParams/NMPCParams field, generated from the dataclasses'
+    # field-metadata tuples, so this file, the
     # dataclasses, and fsae_params.yaml's defaults can't silently drift against
     # each other (92 near-identical hand-written args is itself a drift risk).
     def _mpc_launch_arg(name, default, meta):

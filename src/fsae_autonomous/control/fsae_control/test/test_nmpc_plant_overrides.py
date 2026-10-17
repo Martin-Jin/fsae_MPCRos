@@ -1,9 +1,10 @@
 """
-test_nmpc_plant_overrides.py — NMPCController's plant_overrides and
+test_nmpc_plant_overrides.py: NMPCController's plant_overrides and
 max_steer_rad arguments, which the go-kart launch (nmpc_gokart.launch.py)
-uses to replace the FSDS car's geometry with the kart's.
+uses to replace the built-in plant geometry with the kart's.
 
-Checks that omitting them leaves the FSDS model untouched, that bad input
+Checks that omitting them leaves the built-in default plant untouched, that
+bad input
 is rejected, and that the kart geometry (shorter wheelbase, purely
 kinematic model) asks for the kinematic steering angle on a steady arc:
 delta = atan(L / R).
@@ -65,7 +66,7 @@ def steady_delta(ctrl: NMPCController, radius: float, speed: float, ticks: int =
     return delta
 
 
-def test_defaults_are_the_fsds_plant():
+def test_defaults_are_the_built_in_plant():
     ctrl = make()
     assert ctrl.plant == _Plant(alat_ceiling_enabled=False)
     assert ctrl.max_steer_rad == MAX_STEER_RAD

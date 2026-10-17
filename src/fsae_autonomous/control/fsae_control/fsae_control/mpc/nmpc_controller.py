@@ -87,11 +87,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
 
-from fsae_control.control_utils import (
-    curvature_speed, dynamic_speed_cap, load_path_profile_csv,
-    load_path_heading_profile_csv,
-    load_speed_profile_csv, precomputed_speed_at, tracking_error_speed_gate,
-)
+from fsae_control.control_utils import curvature_speed, tracking_error_speed_gate
 from fsae_control.mpc.nmpc_core import NMPCController
 from fsae_control.mpc.mpc_params import declare_mpc_params, mpc_params_from_node
 from fsae_control.mpc.nmpc_params import declare_nmpc_params, nmpc_params_from_node
@@ -103,23 +99,23 @@ CONE_BRAKE_WIDTH     = 0.18   # m — lateral half-width of braking corridor (36
 CONE_RESET_THRESHOLD = 0.3    # s — continuous cone-brake duration before one NMPC reset
 PATH_TIMEOUT         = 0.5    # s — reset the NMPC if no fresh trajectory within this window
 
-# Max rate (m/s^2) at which the speed TARGET may rise. Mirrors the sim tree's
-# mpc_controller.py / sim/rollout_core.SPEED_TARGET_RISE_RATE — keep in sync
-# if either changes. Decreases are never rate-limited; delaying a genuine
-# brake request is the failure this is meant to prevent.
+# Max rate (m/s^2) at which the speed TARGET may rise. Decreases are never
+# rate-limited; delaying a brake request is the failure this is meant to
+# prevent. Value tuned in simulation; UNVERIFIED on the car or kart.
 SPEED_TARGET_RISE_RATE = 7.0
 
 # Max speed error (m/s) the rise limiter is allowed to open up before it stops
-# ramping and waits for the car. Mirrors sim/rollout_core.py's constant of the
-# same name — keep in sync.
+# ramping and waits for the car. Value tuned in simulation; UNVERIFIED on the
+# car or kart.
 #
 # SPEED_TARGET_RISE_RATE alone assumes the car can accelerate at that rate. From
 # a standing start it cannot: the car does not break static friction for ~1 s,
 # so the target ramps to ~7 m/s while the car is still stationary and banks a
 # deficit it spends the next second chasing. The NMPC minimises one scalar cost
 # over the horizon, so a speed error that large swamps the lateral term and the
-# optimiser trades e_y away for speed it was never going to get — measured live
-# as a sideways excursion at launch that self-corrects once the car is rolling.
+# optimiser trades e_y away for speed it was never going to get. In simulation
+# this shows as a sideways excursion at launch that self-corrects once the car
+# is rolling; UNVERIFIED on the car or kart.
 #
 # Capping the DEFICIT rather than gating on measured speed is deliberate. A gate
 # of the form "hold the target while v_actual is near zero" deadlocks: no target
@@ -160,9 +156,6 @@ class NMPCControllerNode(Node):
                 ('v_max', 20.0),      # m/s — top speed on straights
                 ('v_min', 1.5),       # m/s — minimum speed through tight corners
                 ('steer_lp', 0.3),    # output steering low-pass (EMA); 1.0 disables
-                ('enable_dynamic_speed_cap', True),
-                ('dynamic_cap_a_lat_max', 3.2),   # m/s^2
-                ('dynamic_cap_safety', 0.9),
                 # GAP B4: tighter of this and the solver's own control_limits.
                 # MAX_STEER_RAD wins. Neither is verified against the real
                 # rack yet — see NMPC_INTEGRATION_GAPS.md.
@@ -172,12 +165,6 @@ class NMPCControllerNode(Node):
                 # value, not a validated constant -- expect to retune on the
                 # rig.
                 ('accel_to_speed_horizon_s', 0.25),   # s
-                ('map_path', ''),       # '' -> live curvature_speed() (default);
-                                        # see GAP C2 -- inert until a track CSV
-                                        # exists for this repo.
-                ('path_map_path', ''),  # '' -> live /fsae/planning/selected_trajectory
-                                        # (default); see GAP C2.
-                ('use_precomputed_heading_profile', False),
                 # State inputs. Defaults keep the original topic contract; the
                 # go-kart launch (nmpc_gokart.launch.py) overrides them.
                 ('odom_topic', '/fsae/slam/car_odom'),
@@ -191,7 +178,9 @@ class NMPCControllerNode(Node):
                 ('imu_yaw_rate_sign', 1.0),  # flip to -1.0 if the IMU's z axis points down
                 ('state_timeout_s', 0.3),    # odom/IMU older than this is ignored
                 ('cmd_topic', '/fsae/control/cmd_vel'),
-                # Vehicle model. -1.0 keeps nmpc_core._Plant's FSDS value.
+                # Vehicle model. -1.0 keeps nmpc_core._Plant's built-in
+                # default, which was set for a simulated car; UNVERIFIED on
+                # the car or kart.
                 # The pose this node receives is the model's reference point:
                 # lr is how far that point sits ahead of the rear axle, lf how
                 # far it sits behind the front axle.
@@ -206,12 +195,6 @@ class NMPCControllerNode(Node):
         self._v_max = self.get_parameter('v_max').get_parameter_value().double_value
         self._v_min = self.get_parameter('v_min').get_parameter_value().double_value
         self._steer_lp = self.get_parameter('steer_lp').get_parameter_value().double_value
-        self._enable_dynamic_speed_cap = self.get_parameter(
-            'enable_dynamic_speed_cap').get_parameter_value().bool_value
-        self._dynamic_cap_a_lat_max = self.get_parameter(
-            'dynamic_cap_a_lat_max').get_parameter_value().double_value
-        self._dynamic_cap_safety = self.get_parameter(
-            'dynamic_cap_safety').get_parameter_value().double_value
         max_steer_deg = self.get_parameter('max_steer_angle').get_parameter_value().double_value
         self._accel_to_speed_horizon_s = self.get_parameter(
             'accel_to_speed_horizon_s').get_parameter_value().double_value
@@ -245,53 +228,13 @@ class NMPCControllerNode(Node):
                 'nmpc_controller launched with use_nmpc=false — this node '
                 'always runs the NMPC regardless of that flag (there is no '
                 'LTV-QP fallback in this repo); the flag is declared only '
-                'for MPCParams/NMPCParams field-name parity with the sim '
-                'tree. Set it true to silence this warning.'
+                'so the MPCParams/NMPCParams field set stays complete. Set it '
+                'true to silence this warning.'
             )
 
-        self._speed_profile = None  # (path_X, path_Y, path_V) or None — GAP C2
-        map_path = self.get_parameter('map_path').get_parameter_value().string_value
-        if map_path:
-            try:
-                self._speed_profile = load_speed_profile_csv(map_path)
-                self.get_logger().info(
-                    f'Loaded precomputed speed profile ({len(self._speed_profile[0])} pts) '
-                    f'from {map_path} — using it instead of live curvature_speed().'
-                )
-            except (OSError, ValueError) as exc:
-                self.get_logger().error(
-                    f'Failed to load map_path={map_path}: {exc}. '
-                    'Falling back to live curvature_speed().'
-                )
-
-        self._static_path: np.ndarray | None = None  # GAP C2
-        path_map_path = self.get_parameter('path_map_path').get_parameter_value().string_value
-        if path_map_path:
-            try:
-                self._static_path = load_path_profile_csv(path_map_path)
-                self.get_logger().info(
-                    f'Loaded precomputed path ({len(self._static_path)} pts) from '
-                    f'{path_map_path} — planner output on /fsae/planning/selected_trajectory '
-                    'will be ignored.'
-                )
-            except (OSError, ValueError) as exc:
-                self.get_logger().error(
-                    f'Failed to load path_map_path={path_map_path}: {exc}. '
-                    'Falling back to the live planner topic.'
-                )
-
-        self._heading_profile: np.ndarray | None = None
-        use_precomputed_heading_profile = self.get_parameter(
-            'use_precomputed_heading_profile').get_parameter_value().bool_value
-        if use_precomputed_heading_profile and path_map_path:
-            try:
-                self._heading_profile = load_path_heading_profile_csv(path_map_path)
-            except (OSError, ValueError) as exc:
-                self.get_logger().error(
-                    f'Failed to load heading profile from path_map_path='
-                    f'{path_map_path}: {exc}. Falling back to geometric heading.'
-                )
-
+        # Always drives the live planner path (/fsae/planning/selected_trajectory)
+        # with a speed target from its curvature. Precomputed path and speed-profile
+        # CSVs are not supported: no recorded track exists for the car or the kart.
         # GAP F1: no telemetry_logger.py/scoring.py in this repo yet (stage 2,
         # deferred). Nothing is logged to CSV; solve/tracking diagnostics are
         # only available via the ROS logger below.
@@ -307,8 +250,7 @@ class NMPCControllerNode(Node):
         self.create_subscription(Pose, '/fsae/slam/car_position', self._pose_cb, 10)
         # PLACEHOLDER (GAP A1/A2/A3/A7): no publisher exists in this repo
         # today. Subscribed unconditionally so a future state estimator on
-        # this exact topic/type (matching the sim tree's own contract) needs
-        # no change here.
+        # this exact topic/type needs no change here.
         self.create_subscription(Odometry, odom_topic, self._odom_cb, sensor_qos)
         if imu_topic:
             self.create_subscription(Imu, imu_topic, self._imu_cb, sensor_qos)
@@ -343,9 +285,7 @@ class NMPCControllerNode(Node):
             String, '/fsae/viz/nmpc_telemetry', 5)
         self._nmpc_publish_telemetry_enabled = nmpc_params.nmpc_publish_telemetry_enabled
 
-        self._path: np.ndarray = (
-            self._static_path if self._static_path is not None else np.empty((0, 2))
-        )
+        self._path: np.ndarray = np.empty((0, 2))
         self._path_stamp = None          # GAP C6: arrival-time compromise
         self._have_pose = False
         self._car_pos = np.zeros(2)
@@ -394,17 +334,6 @@ class NMPCControllerNode(Node):
             self.get_logger().info(
                 f'Vehicle model overrides: {plant_overrides}, '
                 f'max steer {math.degrees(self._mpc.max_steer_rad):.1f} deg')
-        if self._static_path is not None:
-            if self._speed_profile is not None:
-                sp_x, sp_y, sp_v = self._speed_profile
-                self._mpc.set_static_path(
-                    self._static_path,
-                    path_v_xy=np.column_stack([sp_x, sp_y]), path_v=sp_v,
-                )
-            else:
-                self._mpc.set_static_path(self._static_path)
-        if self._heading_profile is not None:
-            self._mpc.set_heading_profile(self._heading_profile)   # no-op on NMPC, kept for parity
 
         self.create_timer(dt, self._control_step)
         self.get_logger().info(
@@ -418,8 +347,6 @@ class NMPCControllerNode(Node):
     # ------------------------------------------------------------------
 
     def _path_cb(self, msg: PoseArray) -> None:
-        if self._static_path is not None:
-            return
         self._path = np.array(
             [[p.position.x, p.position.y] for p in msg.poses], dtype=np.float64
         ) if msg.poses else np.empty((0, 2))
@@ -450,9 +377,9 @@ class NMPCControllerNode(Node):
         self._have_pose = True
 
     def _odom_cb(self, msg: Odometry) -> None:
-        # Body-frame velocity (x forward, y left), same convention as the sim
-        # tree's sim_perception.py. Highest-priority source for v_x/v_y/yaw_rate
-        # while fresh, see _resolve_state().
+        # Body-frame velocity (x forward, y left), the REP 103 convention.
+        # Highest-priority source for v_x/v_y/yaw_rate while fresh, see
+        # _resolve_state().
         if self._odom_velocity_source == 'pose_diff':
             vel = self._odom_pose_diff(msg)
             if vel is None:
@@ -622,13 +549,10 @@ class NMPCControllerNode(Node):
         _t_loop0 = time.perf_counter()
 
         # ── Phase 1: emergency brake/reset on stale/missing/bad path or pose ──
-        if self._static_path is not None:
-            path_stale = False
-        else:
-            path_stale = (
-                self._path_stamp is None
-                or (self.get_clock().now() - self._path_stamp).nanoseconds * 1e-9 > PATH_TIMEOUT
-            )
+        path_stale = (
+            self._path_stamp is None
+            or (self.get_clock().now() - self._path_stamp).nanoseconds * 1e-9 > PATH_TIMEOUT
+        )
         path_direction_bad = self._have_pose and len(self._path) >= 2 and not self._path_direction_ok(self._path)
         if not self._have_pose or len(self._path) < 2 or path_stale or path_direction_bad:
             self._mpc.reset()
@@ -652,30 +576,13 @@ class NMPCControllerNode(Node):
             )
             self._active_vx_source = vx_source
 
-        # ── Speed target: curvature/oracle profile, tracking-error gate,
-        #    rise-rate limiter — identical derivation to the sim tree ──────
-        if self._speed_profile is not None:
-            path_X, path_Y, path_V = self._speed_profile
-            v_curv = precomputed_speed_at(self._car_pos, path_X, path_Y, path_V)
-            if self._enable_dynamic_speed_cap:
-                path_ahead = self._path
-                if len(path_ahead) > 2:
-                    i_near = int(np.argmin(np.linalg.norm(path_ahead - self._car_pos, axis=1)))
-                    if i_near < len(path_ahead) - 2:
-                        path_ahead = path_ahead[i_near:]
-                v_cap = dynamic_speed_cap(
-                    path_ahead, v_max=self._v_max, v_min=self._v_min,
-                    a_lat_max=self._dynamic_cap_a_lat_max,
-                    safety=self._dynamic_cap_safety,
-                )
-                v_curv = min(v_curv, v_cap)
-        else:
-            path_ahead = self._path
-            if len(path_ahead) > 2:
-                i_near = int(np.argmin(np.linalg.norm(path_ahead - self._car_pos, axis=1)))
-                if i_near < len(path_ahead) - 2:
-                    path_ahead = path_ahead[i_near:]
-            v_curv = curvature_speed(path_ahead, v_max=self._v_max, v_min=self._v_min)
+        # ── Speed target: path curvature, tracking-error gate, rise-rate limiter ──
+        path_ahead = self._path
+        if len(path_ahead) > 2:
+            i_near = int(np.argmin(np.linalg.norm(path_ahead - self._car_pos, axis=1)))
+            if i_near < len(path_ahead) - 2:
+                path_ahead = path_ahead[i_near:]
+        v_curv = curvature_speed(path_ahead, v_max=self._v_max, v_min=self._v_min)
 
         tel = self._mpc.last_telemetry
         raw_gate = tracking_error_speed_gate(tel.get('e_y', 0.0), tel.get('e_psi', 0.0))

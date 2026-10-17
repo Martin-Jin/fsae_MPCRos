@@ -25,8 +25,7 @@ DEFAULT_SPACING_M = 0.5
 
 
 def straight_path(length_m: float, spacing_m: float = DEFAULT_SPACING_M) -> np.ndarray:
-    """Unchanged straight-line generator, factored out of
-    mock_pose_path_publisher.py's old inline __init__ code verbatim."""
+    """Straight line along +x from the origin, points spacing_m apart."""
     n_pts = max(2, int(length_m / spacing_m) + 1)
     xs = np.linspace(0.0, length_m, n_pts)
     return np.column_stack([xs, np.zeros_like(xs)])
@@ -108,3 +107,22 @@ def random_start_offset(max_lateral_m: float, max_heading_deg: float,
     dy = float(rng.uniform(-max_lateral_m, max_lateral_m))
     dyaw = float(np.radians(rng.uniform(-max_heading_deg, max_heading_deg)))
     return 0.0, dy, dyaw
+
+
+def scripted_time(t: float, path_length_m: float, forward_speed_mps: float) -> tuple:
+    """
+    (t_eff, ended) for the mock car's scripted motion at elapsed time t.
+
+    The car reaches the end of the path at t_end = path_length_m /
+    forward_speed_mps. From then on t_eff stays at t_end, so the along-path
+    position AND the lateral sweep both freeze and the car holds its final
+    pose. Without this the along-path position clamps at the last waypoint
+    while the sine sweep keeps running, and the car oscillates left and right
+    at the end of the path. A speed of 0 or less never ends.
+    """
+    if forward_speed_mps <= 0.0:
+        return t, False
+    t_end = path_length_m / forward_speed_mps
+    if t >= t_end:
+        return t_end, True
+    return t, False

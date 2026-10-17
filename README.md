@@ -27,6 +27,8 @@ It also carries `control/fsae_can_bridge/fsae_can_bridge/joystick_teleop.py`, wh
 the NMPC steering mode, and `docs/ARCHITECTURE.md` with the NMPC added to its flow charts.
 See `src/fsae_autonomous/docs/NMPC_GOKART_GROUND_TEST.md`, and
 `src/fsae_autonomous/docs/NMPC_GOKART_BRINGUP_CHECKLIST.md` for the to-do list.
+Testing without letting the NMPC drive (unit tests, bench, shadow mode):
+`src/fsae_autonomous/docs/NMPC_VALIDATION_AND_TESTING.md`.
 
 ## Status: replaces an earlier, different port in this repo's history
 

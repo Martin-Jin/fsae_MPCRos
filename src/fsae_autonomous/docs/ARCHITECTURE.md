@@ -10,7 +10,7 @@ Per-node charts: only the NMPC has one, its inputs and outputs in
 [`MPC_NODE_DOCS.md`](../control/fsae_control/fsae_control/mpc/MPC_NODE_DOCS.md#inputs-and-outputs-flow-chart).
 Every other node is described only by diagram 2 and the connection table below it.
  
-All diagrams are **Mermaid** (render automatically on GitHub). They are hand-built and
+All diagrams are **Mermaid**, shown as rendered SVGs from `docs/diagrams/` with the Mermaid source in a collapsed block under each (GitHub also renders the source). They are hand-built and
 **verified against the source** (every `create_publisher` / `create_subscription` and the
 C++ camera node) as of this commit. The **connection table** under diagram 2 is the
 authoritative, exhaustive list — rebuild from that if you port these to Lucid.
@@ -25,6 +25,11 @@ authoritative, exhaustive list — rebuild from that if you port these to Lucid.
 Subsystem names only — how data flows from the sensors to the kart. The real node and
 topic wiring is diagram 2.
  
+![Diagram 1: high-level pipeline](diagrams/architecture_1_pipeline.svg)
+
+<details>
+<summary>Mermaid source (edit this, then re-render the image, see docs/diagrams/README.md)</summary>
+
 ```mermaid
 flowchart LR
     classDef sensor fill:#c9d7f5,stroke:#7f96cf,color:#16213e
@@ -58,6 +63,8 @@ flowchart LR
     class CDN,FUSE,MAP,PLAN,STAN,NMPC,TEL,CAN,SER proc
     class VIZ viz
 ```
+
+</details>
  
 **Reading it:** the camera node does two jobs — detect cones (YOLOv8 on the Jetson GPU) and
 report where the car is (visual-inertial odometry, taken from the ZED wrapper's pose). That's
@@ -96,6 +103,11 @@ Boxes are **ROS nodes** (ROS node name on top, package/source beneath). Arrows a
 link. **Dashed red** = a dangling/orphan/external link (see notes). Only **one planner** and
 **one cmd_vel source** run at a time.
  
+![Diagram 2: node and topic graph](diagrams/architecture_2_node_topic_graph.svg)
+
+<details>
+<summary>Mermaid source (edit this, then re-render the image, see docs/diagrams/README.md)</summary>
+
 ```mermaid
 flowchart LR
     classDef orphan stroke:#c0392b,stroke-dasharray:5 5,color:#c0392b;
@@ -221,6 +233,8 @@ flowchart LR
     class CAM,MAP,STAN,DEC,SYS,PV,PPV,NMPC orphan;
     class CTK ext;
 ```
+
+</details>
  
 > Mermaid renders the self-loops above as the cleanest way to flag a one-ended (orphan)
 > topic. They are **not** real loopbacks — read each as "this node publishes/subscribes a
@@ -315,6 +329,11 @@ rooted at `odom` exists without viz; only the `map` frame still requires visuali
 Two layers: thin **mission launches** compose reusable **subsystem launches**, which start
 the nodes. Each mission picks exactly one `cmd_vel` source (there's no command mux).
  
+![Diagram 3: launch tree](diagrams/architecture_3_launch_tree.svg)
+
+<details>
+<summary>Mermaid source (edit this, then re-render the image, see docs/diagrams/README.md)</summary>
+
 ```mermaid
 flowchart LR
     subgraph L2["Mission launches — pick ONE"]
@@ -323,7 +342,8 @@ flowchart LR
         TELE["teleop.launch.py<br/>arg: bench_rig"]
         BENCH["bench.launch.py<br/>arg: use_viz"]
         NGK["nmpc_gokart.launch.py<br/>args: planner, use_rviz, use_gui"]
-        NBEN["nmpc_bench.launch.py<br/>args: use_viz, use_gui, scenario"]
+        NBEN["nmpc_bench.launch.py<br/>args: use_viz, use_gui, scenario<br/>cmd_vel remapped to nmpc_bench_cmd"]
+        NSH["nmpc_shadow.launch.py<br/>args: use_rviz, use_gui, use_base_tf<br/>run next to a driving launch"]
     end
     subgraph L1["Subsystem launches"]
         DESC["description.launch.py"]
@@ -369,6 +389,11 @@ flowchart LR
     NBEN -->|"if use_gui"| NGUIN
     NBEN -->|"if use_viz"| VIZL
     NBEN -->|"if use_viz"| NBVIZ["robot_state_publisher + rviz2"]
+
+    NSH --> NMPCN3["nmpc_controller<br/>kart params, out: nmpc_shadow_cmd (unused)"]
+    NSH -->|"if use_base_tf"| BTFN["base_tf"]
+    NSH -->|"if use_rviz"| NSVIZ["path_viz copy + rviz2"]
+    NSH -->|"if use_gui"| NGUIN
  
     BENCH --> CANL
     BENCH --> MOCKN["mock_stimulus"]
@@ -393,6 +418,8 @@ flowchart LR
     VIZL --> V3["pursuit_viz"]
     VIZL --> V4["base_tf"]
 ```
+
+</details>
  
 **Key facts:**
 - `autonomous.launch.py` auto-**skips SLAM** when `planner:=fasttube_without_kalman` (that
@@ -420,7 +447,12 @@ flowchart LR
 - **`nmpc_gokart.launch.py` does not include `control.launch.py` or `can.launch.py`**: it
   starts `nmpc_controller` itself with the kart's parameters, and the kart has no CAN path.
 - **`nmpc_bench.launch.py`** runs the NMPC against `mock_pose_path_publisher` (no car, no
-  sensors), optionally with RViz and the telemetry GUI.
+  sensors), optionally with RViz and the telemetry GUI. Its `cmd_vel` is remapped to
+  `nmpc_bench_cmd`, so no command reaches any vehicle.
+- **`nmpc_shadow.launch.py`** runs only the NMPC (publishing on the unused
+  `nmpc_shadow_cmd`), RViz and the GUI next to a launch that is already driving, to watch
+  the NMPC's prediction against the real sensors. See
+  [`NMPC_VALIDATION_AND_TESTING.md`](NMPC_VALIDATION_AND_TESTING.md).
  
 ---
  

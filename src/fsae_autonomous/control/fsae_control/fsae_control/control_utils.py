@@ -2,14 +2,15 @@ import math
 
 import numpy as np
 
-# FSDS: max steering angle 25 degrees per ros-bridge.md
+# Max road-wheel steering angle, 25 deg. Default from the simulated car model;
+# UNVERIFIED for the real car or kart.
 MAX_STEER_RAD = math.radians(25.0)
 
 # Planning-level braking capability (m/s^2, positive magnitude) used by
 # curvature_speed()'s braking-distance propagation. Deliberately below the
 # vehicle's true limit (~9 m/s^2): the tyres also need lateral force for the
 # corner being braked into (friction circle), plus margin for model error and
-# actuation lag. Mirrors a_brake_max in fsae_MPCTest/sim/speed_profile.py.
+# actuation lag. Tuned in simulation; UNVERIFIED on the car or kart.
 A_BRAKE_PLAN = 5.0
 
 
@@ -42,10 +43,10 @@ class StanleyController:
           the RIGHT of the path.
     v   — car speed (m/s); k_soft prevents division by zero at standstill.
 
-    Sign convention (FSDS ENU: x forward, y left):
-      output > 0  → steer right
-      output < 0  → steer left
-      output ∈ [-1, 1]
+    Sign convention (ENU: x forward, y left):
+      output > 0  → steer left
+      output < 0  → steer right
+      output is the road-wheel angle in radians, clamped to ±MAX_STEER_RAD
 
     Tuning:
       k_cte     — cross-track gain.  Higher values correct lateral error faster
@@ -73,11 +74,10 @@ class StanleyController:
         self.k_soft    = k_soft
         self.k_d       = k_d
         self.wheelbase = wheelbase
-        # Last tick's tracking error, in the SAME sign convention as
-        # mpc_core.py's last_telemetry (+ve = left/CCW) so both controllers'
-        # e_y/e_psi are directly comparable in telemetry_logger.py's CSV —
-        # see compute()'s sign flip on `e` below. Exposed for ControlLogger;
-        # not used internally by compute() itself.
+        # Last tick's tracking error, in the same sign convention as the
+        # NMPC's last_telemetry (+ve = left/CCW) so both controllers' e_y/e_psi
+        # are directly comparable in logs. See compute()'s sign flip on `e`
+        # below. Exposed for logging; not used internally by compute().
         self.last_e_y: float = 0.0
         self.last_e_psi: float = 0.0
 
@@ -90,7 +90,8 @@ class StanleyController:
         car_yaw_rate: float = 0.0,
     ) -> float:
         """
-        Return a steering command in [-1, 1].
+        Return a steering angle in radians (positive = left), clamped to
+        ±MAX_STEER_RAD.
 
         path         — (N, 2) array of waypoints in map frame (must have N ≥ 2)
         car_pos      — (2,) car position in map frame
@@ -131,8 +132,8 @@ class StanleyController:
         right_n = np.array([t[1], -t[0]])   # 90° CW rotation of tangent
         e = float(np.dot(fa - path[idx], right_n))
 
-        # Expose this tick's error in mpc_core.py's sign convention (+ve =
-        # left/CCW) — e above is +ve RIGHT, the opposite — so a Stanley log
+        # Expose this tick's error in the NMPC's sign convention (+ve =
+        # left/CCW). e above is +ve RIGHT, the opposite, so a Stanley log
         # and an MPC log can be plotted on the same axis without a manual
         # sign flip. theta_e already matches (+ve = path turns left of car).
         self.last_e_y = -e
@@ -146,7 +147,7 @@ class StanleyController:
                  - self.k_d * car_yaw_rate)
 
         # Return the steering ANGLE in radians (positive = left), clamped to the
-        # physical limit.  FSDS normalisation (+1 = right) is done by fsds_bridge.
+        # physical limit. Any actuator-specific normalisation is done downstream.
         return float(np.clip(delta, -MAX_STEER_RAD, MAX_STEER_RAD))
 
 
@@ -169,8 +170,8 @@ def tracking_error_speed_gate(e_y, e_psi,
     independently measured/tuned: _lo is set well past normal tracking noise
     so the gate doesn't fire during ordinary driving, _hi is set at a clearly
     "badly off" error, and floor stops short of zero so the car never loses
-    all steering authority. Retune via tuning.md if live data suggests either
-    threshold fires too early/late.
+    all steering authority. UNVERIFIED on the car or kart: retune if live
+    data shows either threshold fires too early or too late.
 
     Parameters
     ----------
@@ -369,16 +370,15 @@ def dynamic_speed_cap(waypoints, v_max=15.0, v_min=1.5,
     so it has no notion of "car is currently going faster than the profile
     allows and the corner is close enough that it can no longer brake down
     to the profile's target in time." That mismatch is exactly what shows up
-    as late, hard braking and steering saturation at corner entry — see
-    fsae_MPCTest/`docs/reference/README.md`'s speed-governor section.
+    as late, hard braking and steering saturation at corner entry.
 
     This is a thin wrapper over curvature_speed() using its own (separate,
-    typically tighter) a_lat_max/safety defaults — the oracle profile was
+    typically tighter) a_lat_max/safety defaults. The oracle profile was
     optimised for the whole lap and is trusted as the primary target, so
     this cap is only meant to catch the case where live tracking has drifted
-    from that plan, not to re-litigate the racing line. Callers take
-    min(oracle_v_target, dynamic_speed_cap(...)) — see
-    controller.enable_dynamic_speed_cap.
+    from that plan, not to replace the racing line. Callers take
+    min(oracle_v_target, dynamic_speed_cap(...)). Defaults UNVERIFIED on the
+    car or kart.
 
     Parameters
     ----------
@@ -397,30 +397,27 @@ def dynamic_speed_cap(waypoints, v_max=15.0, v_min=1.5,
 
 def _load_profile_csv(csv_path: str):
     """
-    Shared reader for fsae_MPCTest's tuner/export_speed_profile.py /
-    tuner/tools/raceline_optimizer.py CSVs. Accepts two header shapes:
+    Shared reader for precomputed speed-profile / raceline CSVs. Accepts
+    two header shapes:
       "x,y,psi,v_target"              (4 columns, speed_profile.csv and
-                                        older raceline.csv exports)
-      "x,y,psi,psi_target,v_target"   (5 columns, raceline_optimizer.py
-                                        exports since the shaped
-                                        heading-lead reference was added —
-                                        see late_turn_in_investigation.md
-                                        Part 8/9)
+                                        plain raceline.csv files)
+      "x,y,psi,psi_target,v_target"   (5 columns, raceline files that carry
+                                        a shaped heading-lead reference)
     Comment lines starting with '#' are skipped. Column count is detected
     per-file from the first data row, not the header text, so a caller
     doesn't need to know in advance which shape a given CSV has.
 
     Deliberately a plain reader with no scipy/centreline-reconstruction
-    dependency — that runs once, offline, when the CSV is exported.
+    dependency. That work runs once, ahead of time, when the CSV is made.
 
     Returns
     -------
     (path_X, path_Y, path_Psi, path_PsiTarget, path_V) : tuple of
         np.ndarray, shape (n,). path_PsiTarget equals path_Psi
-        (the geometric tangent) for a 4-column file — i.e. an old/
-        speed-profile CSV with no shaped-heading column behaves exactly
-        as if psi_target had been exported equal to psi, a genuine no-op
-        for every caller that doesn't ask for it explicitly.
+        (the geometric tangent) for a 4-column file, so a CSV with no
+        shaped-heading column behaves exactly as if psi_target had been
+        exported equal to psi, a no-op for every caller that doesn't ask
+        for it explicitly.
 
     Raises
     ------
@@ -451,12 +448,11 @@ def _load_profile_csv(csv_path: str):
 
 def load_speed_profile_csv(csv_path: str):
     """
-    Load a pre-computed (x, y, v_target) speed profile exported by
-    fsae_MPCTest's tuner/export_speed_profile.py.
+    Load a pre-computed (x, y, v_target) speed profile CSV.
 
     For a track that's already been mapped, this replaces curvature_speed()'s
     per-tick re-derivation with a lookup against an oracle profile computed
-    once, offline, from the whole recorded map — the live-built centreline is
+    once, ahead of time, from the whole recorded map. The live-built centreline is
     frequently shorter than curvature_speed()'s own scan_end (perception FOV
     clips laterally on a corner before its forward window does), so this
     bypasses that shortfall for a track that's already known.
@@ -480,20 +476,18 @@ def load_speed_profile_csv(csv_path: str):
 
 def load_path_profile_csv(csv_path: str):
     """
-    Load a pre-computed (x, y) path exported by fsae_MPCTest's
-    tuner/export_speed_profile.py, for use as a drop-in replacement of the
-    live planner's /fsae/planning/selected_trajectory centreline.
+    Load a pre-computed (x, y) path CSV, for use as a drop-in replacement
+    of the live planner's /fsae/planning/selected_trajectory centreline.
 
     For a track that's already been mapped, this removes the live planner
-    (centerline_planner.py / boundary.py / cone_map.py) from the control loop
-    entirely, isolating controller/plant tracking error from planner-induced
-    path error.
+    from the control loop entirely, isolating controller/plant tracking
+    error from planner-induced path error.
 
-    psi is exported but not returned here: MPCController._error_state()
-    already derives path heading from consecutive waypoints (atan2 of the
-    segment direction, the same convention centerline_planner.py's published
-    PoseArray uses), so the (n,2) array below is a direct substitute for the
-    live topic's path with no interface change to mpc_core.py.
+    psi is in the file but not returned here: the controller derives path
+    heading from consecutive waypoints (atan2 of the segment direction, the
+    same convention centerline_planner.py's published PoseArray uses), so
+    the (n,2) array below is a direct substitute for the live topic's path
+    with no interface change.
 
     Parameters
     ----------
@@ -514,25 +508,23 @@ def load_path_profile_csv(csv_path: str):
 
 def load_path_heading_profile_csv(csv_path: str):
     """
-    Load the SHAPED heading-lead reference profile (psi_target) exported by
-    fsae_MPCTest's tuner/tools/raceline_optimizer.py — see
-    late_turn_in_investigation.md Part 8/9 for the mechanism and
-    MPCController.set_heading_profile() for how it's consumed.
+    Load the SHAPED heading-lead reference profile (psi_target) from a
+    5-column raceline CSV. The NMPC accepts but ignores this profile (see
+    NMPCController.set_heading_profile()).
 
     Separate from load_path_profile_csv (which returns only (x,y), an
-    (n,2) array used directly as `path` everywhere in mpc_core.py,
-    including CornerMap's curvature segmentation) so that call site's
-    return shape never changes — this is an additive, opt-in lookup, not a
-    replacement for the geometric path array.
+    (n,2) array used directly as `path`) so that call site's return shape
+    never changes. This is an additive, opt-in lookup, not a replacement
+    for the geometric path array.
 
     Row-aligned with load_path_profile_csv's own (x,y) output when given
-    the SAME csv_path (both read the same file, same row order) — the
+    the SAME csv_path (both read the same file, same row order). The
     caller is responsible for loading both from one file, not mixing
     sources.
 
     For a 4-column CSV (no psi_target column), degrades to the plain
-    geometric heading — see _load_profile_csv's docstring for why that's a
-    genuine no-op, not repeated here.
+    geometric heading. See _load_profile_csv's docstring for why that is a
+    no-op.
 
     Parameters
     ----------

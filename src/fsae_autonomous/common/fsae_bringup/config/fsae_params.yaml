@@ -27,33 +27,27 @@ stanley_controller:
     # deleted in case the bench rig comes back.
     actuator_cmd_enabled: false
 
-# --- control/fsae_control (NMPC controller, ported from fsae_planning) ---
+# --- control/fsae_control (NMPC controller) ---
 # Node name is 'nmpc_controller'. Selected by control.launch.py's controller:=nmpc arg;
 # default remains controller:=stanley above, so this block has no effect unless asked
 # for. See docs/NMPC_INTEGRATION_GAPS.md for the full rationale behind every override
 # below and every field this repo cannot yet supply a real measurement for.
 #
 # Every value below is copied from mpc_params.py's MPCParams / nmpc_params.py's
-# NMPCParams field defaults (the sim-tree tuned set, on the FSDS plant, on one
-# recorded track — see NMPC_INTEGRATION_GAPS.md D5), with exactly two overrides:
-# use_nmpc: true (this node always runs the NMPC regardless, but set true here for
-# field-name consistency) and nmpc_alat_ceiling_enabled: false (GAP D2 — that flag
-# models an FSDS simulator artifact, not real vehicle physics; leaving it on would
-# impose a fictitious yaw-restoring moment on the real car).
+# NMPCParams field defaults, which were tuned in simulation on one track (see
+# NMPC_INTEGRATION_GAPS.md D5); UNVERIFIED on the car or kart. Exactly two
+# overrides: use_nmpc: true (this node always runs the NMPC regardless, but set
+# true here for field-name consistency) and nmpc_alat_ceiling_enabled: false
+# (GAP D2: that flag models a lateral-accel limit measured only in simulation;
+# leaving it on would impose a yaw-restoring moment the real car may not have).
 nmpc_controller:
   ros__parameters:
     # --- shared controller-node params (also declared by stanley_controller) ---
     v_max: 20.0                  # m/s -- top speed on straights
     v_min: 1.5                   # m/s -- minimum speed through tight corners
     steer_lp: 0.3                # output steering low-pass (EMA); 1.0 disables
-    enable_dynamic_speed_cap: true
-    dynamic_cap_a_lat_max: 3.2   # m/s^2
-    dynamic_cap_safety: 0.9
     max_steer_angle: 30.0        # degrees; GAP B4 -- clamped against control_limits.MAX_STEER_RAD (25deg) at runtime
     accel_to_speed_horizon_s: 0.25   # s; GAP B3 -- untuned starting value, expect to retune on the rig
-    map_path: ""                 # '' -> live curvature_speed(); GAP C2 -- no track CSV exists in this repo yet
-    path_map_path: ""            # '' -> live /fsae/planning/selected_trajectory; GAP C2
-    use_precomputed_heading_profile: false   # no effect on the NMPC (accepted, ignored -- see nmpc_core.py)
     # State inputs and output topic. These defaults keep the original contract;
     # nmpc_gokart.launch.py overrides them for the kart (ZED odom + IMU in, nmpc_cmd out).
     odom_topic: "/fsae/slam/car_odom"   # no publisher (GAP A1-A3)
@@ -64,8 +58,9 @@ nmpc_controller:
     imu_yaw_rate_sign: 1.0
     state_timeout_s: 0.3                # odom/IMU older than this is ignored
     cmd_topic: "/fsae/control/cmd_vel"
-    # Vehicle model overrides; -1.0 keeps nmpc_core._Plant's FSDS value. The kart's
-    # values are set in nmpc_gokart.launch.py (lf 0.86, lr 0.14, kinematic below 8 m/s).
+    # Vehicle model overrides; -1.0 keeps nmpc_core._Plant's built-in default (set
+    # for a simulated car; UNVERIFIED on the car). The kart's values are set in
+    # nmpc_gokart.launch.py (lf 0.86, lr 0.14, kinematic below 8 m/s).
     plant_lf: -1.0
     plant_lr: -1.0
     plant_v_blend_lo: -1.0
@@ -86,11 +81,10 @@ nmpc_controller:
     r_rate_a: 5.0
     terminal_q_scale: 1.0
 
-    # --- MPCParams: LTV-QP-only adaptive-gain fields ---
-    # This repo has no LTV-QP controller (mpc_core.py) at all -- these fields exist
-    # only so MPCParams can be constructed/declared identically to the sim tree
-    # (parity with fsae_MPCTest/settings.py's 1:1 field mapping). The NMPC never
-    # reads them directly.
+    # --- MPCParams: simulation-controller-only adaptive-gain fields ---
+    # This repo does not carry that controller. These fields exist only so
+    # MPCParams can be constructed and declared as one complete set. The NMPC
+    # never reads them directly.
     adaptive_q_scaling_enabled: true
     steer_rate_anti_hunt_enabled: true
     adaptive_r_rate_enable_in_corners: true
@@ -153,15 +147,15 @@ nmpc_controller:
     nmpc_rrate_steer_corner: -1.0
 
     # --- NMPCParams: solver/structural params ---
-    use_nmpc: true               # this node always runs the NMPC; set true for field parity, see comment above
+    use_nmpc: true               # this node always runs the NMPC; set true for consistency, see comment above
     nmpc_horizon: 20
     nmpc_sqp_iters: 1
     nmpc_solve_budget_ms: 25.0   # GAP E2 -- measured on a desktop, not yet on target Jetson hardware
     # Both substep counts are set by the (v_y, r) lateral stiffness, which
     # scales as 1/v_x and so gets worse as the car slows. Anything lower is
     # RK4-unstable at low speed, not merely less accurate, and freezes the
-    # controller at exactly zero steering/accel. See
-    # fsae_MPCTest/docs/logs/nmpc_low_speed_accel_stall_investigation.md
+    # controller at exactly zero steering/accel. See nmpc_params.py's field
+    # docstrings.
     nmpc_rk_substeps: 4
     nmpc_jac_substeps: 4
     # Speed-gates on the substep counts: the RK4 instability that forces
@@ -179,7 +173,7 @@ nmpc_controller:
     # steering cannot move the car, but the SQP's cost is summed over the
     # whole horizon and the predicted v_x leaves zero by stage 1, so it
     # pre-commits U[0] toward what helps later stages and the car launches
-    # already turned (~-6.8 deg measured live). Faded out rather than
+    # already turned (~-6.8 deg in simulation; UNVERIFIED on the kart). Faded out rather than
     # released, since a hard cutoff just relocated the excursion.
     nmpc_standstill_steer_damp_enabled: true
     nmpc_standstill_speed: 0.5
@@ -193,13 +187,13 @@ nmpc_controller:
     nmpc_curvature_dense_step: 0.5
     nmpc_curvature_smooth_w: 3
     nmpc_kappa_clip: 0.5
-    # GAP D2: OVERRIDDEN from the sim-tree default (true). Models an FSDS simulator
-    # artifact (a sustained ~7.5 m/s^2 lateral-accel clamp), not real vehicle physics --
-    # must stay false for any real-vehicle use.
+    # GAP D2: OVERRIDDEN from the dataclass default (true). Optional model of a
+    # sustained ~7.5 m/s^2 lateral-accel limit measured in simulation. Keep false
+    # on real vehicles; UNVERIFIED whether any real vehicle has this limit.
     nmpc_alat_ceiling_enabled: false
     nmpc_spline_reference_enabled: true
-    nmpc_horizon_speed_profile_enabled: false   # sim-tree finding: live-rejected, do not enable -- see mpc_params.py
-    nmpc_friction_circle_enabled: false         # sim-tree finding: no slack var, goes infeasible -- do not enable
+    nmpc_horizon_speed_profile_enabled: false   # rejected in simulation, do not enable; see nmpc_params.py
+    nmpc_friction_circle_enabled: false         # no slack var, went infeasible in simulation; do not enable
     nmpc_speed_limit_enabled: false
     nmpc_speed_limit_margin: 0.5
     nmpc_speed_limit_slack_weight: 200.0

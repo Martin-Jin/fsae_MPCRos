@@ -1,97 +1,82 @@
 # Title: nmpc_core.py
 
 """
-nmpc_core.py — NONLINEAR model-predictive path-tracking controller
+nmpc_core.py: NONLINEAR model-predictive path-tracking controller
 (Frenet-frame / curvilinear coordinates, Gauss-Newton SQP, condensed dense QP
-subproblem solved by OSQP).
+subproblem solved by OSQP). Driven by nmpc_controller.py, which refuses to
+run unless NMPCParams.use_nmpc is True.
 
-This is a SECOND, independently selectable controller. It does not modify,
-subclass or import behaviour from mpc_core.MPCController's solve path: that
-LTV-QP controller remains the default and is completely untouched. Selection
-happens at node construction time via NMPCParams.use_nmpc (default False) —
-see mpc_controller.py.
-
-WHY IT EXISTS: MPCController's prediction model has no term for the path
-itself bending (`e_psi_dot = r`, missing `- kappa(s)*s_dot`), so with the car
-dead on-line approaching a corner the QP predicts staying on-line forever and
-no cost weighting can produce turn-in before real error exists — measured at
-exactly 0.000 deg commanded across 8 synthetic states. Here `kappa(s)` is
+WHY A CURVATURE-AWARE MODEL: a prediction model with no term for the path
+itself bending (`e_psi_dot = r`, missing `- kappa(s)*s_dot`) predicts that a
+car dead on-line approaching a corner stays on-line forever, so no cost
+weighting can produce turn-in before real error exists. Here `kappa(s)` is
 looked up against arc length `s`, which is itself a STATE driven by the car's
-predicted motion, not indexed by horizon step — so unlike three earlier
-attempts to inject curvature as exogenous horizon data (all producing a
-wrong-direction transient, see below), the obligation isn't schedulable.
-Full derivation, the model equations, the cost construction, and the
-real-time SQP structure (roll-forward feasibility, condensing, warm-start,
-solve-time budget): `docs/reference/README.md`'s "Nonlinear MPC (use_nmpc)"
-section and `late_turn_in_investigation.md` Part 16 (§16.1 gap, §16.3 model,
-§16.5 correctness checks, §16.7 solve time/horizon-iteration sweep).
+predicted motion, not indexed by horizon step. Injecting curvature as
+exogenous per-step horizon data instead tends to produce a wrong-direction
+transient.
 
 State/input vectors: x = [s, e_y, e_psi, v_x, v_y, r, delta_act, a_act],
-u = [delta_cmd, a_cmd]. Every vehicle constant (lf, lr, m, Iz, Cf, Cr,
-tau_delta, tau_a, MAX_STEER_RAD, MAX_ACCEL, MAX_BRAKE, du_max) is taken from
-MPCController unchanged, including its kinematic/dynamic blend breakpoints —
-no new physical constant is introduced. Error measurement (front-axle
-projection, e_psi wrap, e_y_dot) is identical to `MPCController._error_state`
-so an NMPC log means exactly what an LTV-QP log means. Cost weights come from
-the SAME MPCParams the LTV-QP uses — see nmpc_params.py for the per-NMPC
-override fields and the one weight whose meaning changes (q_r -> heading-error
-rate, not absolute yaw rate).
+u = [delta_cmd, a_cmd]. Vehicle constants (lf, lr, m, Iz, Cf, Cr, tau_delta,
+tau_a, blend speeds) live in _Plant; limits (MAX_STEER_RAD, MAX_ACCEL,
+MAX_BRAKE) in control_limits.py. Both are defaults from the simulated car
+model, UNVERIFIED for the real car; see _Plant for the go-kart overrides.
+Error measurement uses front-axle projection, e_psi wrap and e_y_dot. Cost
+weights come from MPCParams; see nmpc_params.py for the per-NMPC override
+fields and the one weight whose meaning changes (q_r -> heading-error rate,
+not absolute yaw rate). Weights were tuned in simulation; UNVERIFIED on the
+car or kart.
 
 WHAT THIS CONTROLLER DELIBERATELY DOES NOT DO
 ---------------------------------------------
-* No adaptive gain schedule (mpc_core's corner-factor/heading-error-asymmetry
-  stack) — that exists to synthesise anticipation a curvature-blind model
+* No adaptive gain schedule (corner-factor/heading-error-asymmetry weight
+  shaping). That exists to synthesise anticipation a curvature-blind model
   can't produce; layering it on a curvature-aware model would double-count an
-  effect that's now structural. Left untouched on the LTV-QP path. The one
-  exception is steer_rate_anti_hunt (see EXPERIMENTAL ADDITIONS below) — it
-  only ever makes steering-RATE more expensive when already
+  effect that is structural here. The one exception is steer_rate_anti_hunt
+  (see EXPERIMENTAL ADDITIONS below). It only ever makes steering-RATE more expensive when already
   centred/aligned/uncurving, the opposite direction from anticipation, so it
   is offered as a separate, independently-defaulted-False opt-in rather than
   assumed exempt from this section's reasoning.
 * No shaped heading-lead profile. set_heading_profile() is accepted (so the
-  nodes need no branch) and IGNORED with a one-time log line — that profile is
+  nodes need no branch) and IGNORED with a one-time log line. That profile is
   a workaround for the same missing curvature term this controller closes
   structurally.
 * No speed profile over the horizon BY DEFAULT. v_ref is the caller's
   single, already low-passed desired_speed held constant across the
-  horizon, same as the LTV-QP gets — deliberately not addressing the
-  (separate) braking-lag problem here, so a live A/B isolates the
-  lateral-model change alone. NMPCParams.nmpc_horizon_speed_profile_enabled
-  (default False, EXPERIMENTAL) can opt into a per-stage lookup instead —
-  see PathReference.v_ref_at.
+  horizon. NMPCParams.nmpc_horizon_speed_profile_enabled (default False,
+  EXPERIMENTAL, not validated, see fsae_params.yaml) can opt into a
+  per-stage lookup instead. See PathReference.v_ref_at.
 
 EXPERIMENTAL ADDITIONS (all additive, all default to preserve the above
 exactly)
 ---------------------------------------------------------------------------
-* PathReference.__init__ now fits an analytic CubicSpline to the raw
-  waypoints by default (NMPCParams.nmpc_spline_reference_enabled, default
-  True) instead of the old dense-resample + moving-average +
-  finite-difference pipeline — see PathReference's own docstring. The old
-  path is kept (not deleted) and selectable via the flag for A/B comparison.
+* PathReference.__init__ fits an analytic CubicSpline to the raw waypoints
+  by default (NMPCParams.nmpc_spline_reference_enabled, default True). The
+  alternative dense-resample + moving-average + finite-difference pipeline
+  is selectable via the flag. See PathReference's own docstring.
 * nmpc_horizon_speed_profile_enabled (default False): see PathReference.v_ref_at.
 * nmpc_friction_circle_enabled (default False): an ADDITIONAL hard
   |F_yf|/|F_yr| <= F_max QP constraint on top of (not instead of) the
-  existing soft alat-ceiling saturation below — see NH_FRICTION and
-  _build_qp/_solve_step.
+  optional soft alat-ceiling saturation below. See NH_FRICTION and
+  _build_qp/_solve_step. Has no slack variable and can go infeasible; keep
+  it off (UNVERIFIED on the car or kart).
 * nmpc_steer_rate_anti_hunt_enabled (MPCParams field, default False):
-  reuses mpc_core._steer_rate_anti_hunt verbatim (imported, not
-  reimplemented, so it is byte-identical by construction) to scale
+  uses control_limits._steer_rate_anti_hunt to scale
   R_rate[0,0] up to nmpc_anti_hunt_boost_max (inherits anti_hunt_boost_max)
   when the CURRENT state is centred/aligned/uncurving. Computed once per
   compute() call from the measured state (not per SQP iteration, not a
   function of horizon step), so it is fresh every tick with no cross-tick
-  memory — unlike a temporal low-pass filter on the output, this adds no
+  memory. Unlike a temporal low-pass filter on the output, this adds no
   lag. See "WHAT THIS CONTROLLER DELIBERATELY DOES NOT DO" above for why
   this is scoped separately from the rest of the gain-schedule family.
 * nmpc_corner_rrate_blend_enabled (MPCParams field, default False): a
-  narrower, ALTERNATIVE port of mpc_core's corner_factor family — blends
+  narrow, ALTERNATIVE form of corner-factor weight shaping. Blends
   R_rate[0,0] between nmpc_rrate_steer_straight/_corner by CURRENT curvature
-  alone (mpc_core._corner_factor/_blend, imported verbatim). Unlike the rest
+  alone (control_limits._corner_factor/_blend). Unlike the rest
   of that family (Q[e_y]/Q[e_psi]/Q[r]/R[steer], deliberately excluded
   above), only R_rate[steer] is touched here, to limit how much of the
   "no adaptive gain schedule" reasoning this overrides. NOT composed with
-  nmpc_steer_rate_anti_hunt_enabled — takes priority over it when both are
-  set; the two are meant to be used one at a time.
+  nmpc_steer_rate_anti_hunt_enabled. It takes priority when both are set;
+  the two are meant to be used one at a time.
 """
 
 import math
@@ -108,11 +93,8 @@ except ImportError as _exc:      # pragma: no cover - see package.xml
     osqp = None
     _OSQP_IMPORT_ERROR = _exc
 
-# PORT NOTE (fsae_autonomous): sourced from fsae_control.mpc.mpc_core (the
-# LTV-QP module) on the sim side. This repo does not carry mpc_core.py (it
-# needs cvxpy/clarabel, which this repo does not depend on), so these 7
-# symbols are lifted into control_limits.py instead -- see that file's
-# docstring. Keep control_limits.py byte-identical to mpc_core.py's copies.
+# Limits and weight-shaping helpers live in control_limits.py so this module
+# depends only on osqp (no cvxpy/clarabel).
 from fsae_control.mpc.control_limits import (
     MAX_ACCEL, MAX_BRAKE, MAX_STEER_RAD, _steer_rate_anti_hunt,
     _corner_factor, _blend, _reversal_penalty_boost,
@@ -143,14 +125,14 @@ NH_FRICTION = 2
 
 # Finite-difference perturbations, one per state then per input. Sized per
 # variable so every column of the Jacobian has a comparable truncation/roundoff
-# balance: eps_j ~ 1e-6 * (typical magnitude of that variable). Verified
-# against central differences in Part 16 §16.5.
+# balance: eps_j ~ 1e-6 * (typical magnitude of that variable), checked
+# against central differences.
 _FD_EPS_X = np.array([1e-6, 1e-6, 1e-7, 1e-6, 1e-6, 1e-7, 1e-7, 1e-6])
 _FD_EPS_U = np.array([1e-7, 1e-6])
 
 # Guard on the Frenet denominator (1 - kappa*e_y). It is singular at
-# e_y = 1/kappa; on this car that is 4.8 m at the tightest logged corner
-# (kappa 0.21) against a 3.5 m track half-width, so this floor is inert in
+# e_y = 1/kappa, which is 4.8 m at kappa 0.21 against a 3.5 m track
+# half-width (figures from a simulated track), so this floor is inert in
 # normal operation and only prevents a sign flip if the car is somehow far
 # off-track on a very tight bend. Not a tunable.
 _DENOM_FLOOR = 0.25
@@ -169,19 +151,18 @@ class PathReference:
     Built once per DISTINCT path: for a precomputed/static path that is once
     per run (see NMPCController.set_static_path / the per-tick signature cache
     in compute()); in live-planner mode the path changes every tick and this is
-    rebuilt each time (measured cost in Part 16 §16.7).
+    rebuilt each time, so its cost is paid per tick.
 
     kappa(s)/psi_ref(s) construction (NMPCParams.nmpc_spline_reference_enabled,
     default True): x(s) and y(s) are each fit as an independent
     `scipy.interpolate.CubicSpline` over the raw (not resampled) arc-length
     knots, and kappa/psi_ref are the spline's own analytic first/second
     derivatives (psi_ref = atan2(y', x'), kappa = (x'y'' - y'x'')/(x'^2+y'^2)^1.5),
-    evaluated on a dense `dense_step` grid. This replaces the previous
-    dense-resample + moving-average + finite-difference pipeline — the SAME
-    denoise precedent control_utils.curvature_speed() uses (dense_step 0.5 m,
-    w 3) — which is still present and used verbatim when the flag is False,
-    kept for A/B comparison against the known "centreline curvature spikes"
-    defect this addresses (see CLAUDE.md). Either way this matters more here
+    evaluated on a dense `dense_step` grid. When the flag is False, a
+    dense-resample + moving-average + finite-difference pipeline is used
+    instead (the same denoise approach control_utils.curvature_speed() uses,
+    dense_step 0.5 m, w 3). The spline guards against curvature spikes in a
+    noisy centreline. Either way this matters more here
     than for a speed cap, because kappa enters the PREDICTION and would be
     steered for.
     """
@@ -236,16 +217,12 @@ class PathReference:
                     # heading and the reference curvature must describe ONE
                     # reference, or the measured e_psi and the model's own
                     # e_psi_dot = r - kappa*s_dot disagree. Measuring e_psi off the
-                    # RAW segment tangent (as the LTV-QP does) quantises it in
-                    # steps of ds/R — 5.7 deg per 0.5 m waypoint on a 5 m-radius
-                    # hairpin — and the NMPC reads each of those steps as a real
-                    # state error to be corrected within a tick or two. Offline
-                    # that produced a hard period-2 steering limit cycle
-                    # (+25 deg / -25 deg alternating) through the tight corners on
-                    # comp_test_map_3; see late_turn_in_investigation.md Part 16
-                    # §16.6. The LTV-QP does not show it because its own
-                    # anti-hunt/R_rate machinery damps exactly this, and because it
-                    # never predicts heading forward at all.
+                    # RAW segment tangent quantises it in steps of ds/R (5.7 deg
+                    # per 0.5 m waypoint on a 5 m-radius hairpin), and the NMPC
+                    # reads each of those steps as a state error to be corrected
+                    # within a tick or two. In simulation that produced a hard
+                    # period-2 steering limit cycle (+25 deg / -25 deg
+                    # alternating) through tight corners.
                     psi_mid = np.unwrap(psi)
                     psi_ref = 0.5 * (psi_mid[:-1] + psi_mid[1:])
 
@@ -388,16 +365,15 @@ class PathReference:
         """
         Frenet projection of a front-axle position onto the path.
 
-        Returns (s0, e_y, e_psi, base_idx, path_yaw). Deliberately identical
-        arithmetic to MPCController._error_state (nearest waypoint, segment
-        tangent, perpendicular projection, wrapped heading error) so e_y/e_psi
-        are directly comparable between the two controllers' logs.
+        Returns (s0, e_y, e_psi, base_idx, path_yaw). Nearest waypoint,
+        perpendicular projection against the smoothed reference heading, then
+        a wrapped heading error at the refined station.
         """
         path = self.path
         base_idx = int(np.argmin(np.linalg.norm(path - front_axle, axis=1)))
         s_base = float(self.arc[base_idx])
         # Reference direction from the SMOOTHED profile, not the raw segment
-        # tangent — see psi_ref_at / the psi_ref construction comment.
+        # tangent. See psi_ref_at / the psi_ref construction comment.
         path_yaw = float(self.psi_ref_at(s_base))
         dx = front_axle[0] - path[base_idx][0]
         dy = front_axle[1] - path[base_idx][1]
@@ -407,7 +383,7 @@ class PathReference:
         s0 = s_base + along
         # Re-evaluate the heading at the refined station: on a tight corner the
         # along-track correction can be a metre or more, over which the
-        # reference heading genuinely changes.
+        # reference heading changes.
         path_yaw = float(self.psi_ref_at(s0))
         e_psi = float(_wrap(car_yaw - path_yaw))
         return s0, float(e_y), e_psi, base_idx, path_yaw
@@ -435,14 +411,15 @@ class _Plant:
     """
     Vehicle constants for the prediction model.
 
-    Every value defaults to MPCController.__init__'s own hardcoded value, kept
-    here so this module is self-contained but MUST be kept in sync with that
-    constructor (and, per CLAUDE.md, with vehicle_physics.VehicleParams) if the
-    plant is ever re-identified. These are NOT independent tunables.
+    The defaults are the simulated car model's values, UNVERIFIED for the
+    real car. They describe one vehicle and are not independent tunables;
+    re-identify them together on the real vehicle.
 
-    A different vehicle (the go-kart) replaces fields through
-    NMPCController's `plant_overrides`, which the ROS node fills from its
-    `plant_*` parameters. The defaults here stay the FSDS car's.
+    The go-kart replaces lf, lr, the blend speeds, tau_delta and the steering
+    limit through NMPCController's `plant_overrides` / `max_steer_rad`, which
+    the ROS node fills from its `plant_*` parameters (see nmpc_controller.py
+    and docs/NMPC_GOKART_GROUND_TEST.md). Fields not overridden keep the
+    simulated car's values (UNVERIFIED for the kart).
     """
     lf: float = 0.70
     lr: float = 0.85
@@ -452,26 +429,23 @@ class _Plant:
     Cr: float = 19512.3421655211
     tau_delta: float = 0.08
     tau_a: float = 0.02
-    # Kinematic->dynamic blend breakpoints, identical to _discrete_model's
-    # alpha = clip((v_x - 1.0)/(2.5 - 1.0), 0, 1).
+    # Kinematic->dynamic blend breakpoints:
+    # alpha = clip((v_x - v_blend_lo)/(v_blend_hi - v_blend_lo), 0, 1).
     v_blend_lo: float = 1.0
     v_blend_hi: float = 2.5
-    # FSDS's measured sustained lateral-acceleration ceiling law, from
-    # MPCParams.alat_ceiling_flat/_slope/_intercept (the SAME law
-    # mpc_core._alat_ceiling_at and model/vehicle_physics.alat_ceiling_at
-    # already use — measured by open-loop system-ID, see CLAUDE.md's
-    # "MECHANISM: a dynamically-enforced lateral-acceleration ceiling").
-    # NMPCController.__init__ overwrites these from its MPCParams instance.
+    # Optional model of a sustained lateral-acceleration limit,
+    # max(flat, slope*|v_x| + intercept), from MPCParams.alat_ceiling_flat/
+    # _slope/_intercept. The law and its numbers were measured in simulation.
+    # NMPCController.__init__ overwrites these from its MPCParams instance and
+    # sets alat_ceiling_enabled from nmpc_alat_ceiling_enabled, which is false
+    # for real vehicles by default (fsae_params.yaml). UNVERIFIED whether any
+    # real vehicle has such a limit.
     #
-    # Why the PREDICTION needs it: linear tyres produce unbounded lateral
-    # force, so without this the model believes it can hold any corner at any
-    # speed. The plant cannot (FSDS clamps sustained a_lat at ~7.5-9 m/s^2),
-    # so the NMPC would command a yaw rate that never arrives, see the error
-    # persist, and command more — which offline showed up as a large-amplitude
-    # steering oscillation through the tight corners, and eventually a spin
-    # (late_turn_in_investigation.md Part 16 §16.6). The LTV-QP has the same
-    # optimistic tyre model but is shielded from it by heavy steering-effort /
-    # steering-rate damping and by never predicting the corner at all.
+    # What it guards against: linear tyres produce unbounded lateral force, so
+    # the model believes it can hold any corner at any speed. If the vehicle
+    # cannot, the NMPC commands a yaw rate that never arrives, sees the error
+    # persist and commands more, which can grow into a large steering
+    # oscillation and a spin.
     alat_ceiling_enabled: bool = True
     alat_ceiling_flat: float = 7.5
     alat_ceiling_slope: float = 0.47
@@ -481,8 +455,8 @@ class _Plant:
 def _tyre_forces(X, p):
     """
     Front/rear axle lateral tyre force (N), vectorised over stages, AFTER
-    the existing soft alat-ceiling tanh saturation (if p.alat_ceiling_enabled)
-    -- i.e. the SAME F_yf/F_yr that actually enter _f's dynamics, not the
+    the optional soft alat-ceiling tanh saturation (if p.alat_ceiling_enabled),
+    i.e. the SAME F_yf/F_yr that enter _f's dynamics, not the
     raw linear-tyre value. A function of STATE only (v_y, r, delta are all
     states; steering/accel COMMAND only affects delta's rate, not the
     instantaneous force at this stage), which is what lets these ride along
@@ -557,7 +531,7 @@ def _f(X, U, ref, p):
 
     if p.alat_ceiling_enabled:
         # Smooth saturation of the lateral forces so the predicted lateral
-        # acceleration cannot exceed the measured FSDS ceiling at this speed.
+        # acceleration cannot exceed the modelled ceiling at this speed.
         # tanh(x)/x is 1 to second order at x=0, so small-signal handling (and
         # therefore the linear-region cornering stiffness the weights were
         # tuned against) is unchanged; only the demanded-beyond-possible region
@@ -584,12 +558,12 @@ def _f(X, U, ref, p):
     # Uncommanded, this manufactured force propagates through v_y_dot_dyn/
     # r_dot_dyn into a large, entirely fictitious predicted e_y/e_psi
     # excursion over the horizon while the car has not physically moved,
-    # which is what caused the NMPC's steering command to snap to the full
-    # +-25 deg mechanical lock in the first ~0.5-0.7s of every run from a
-    # standing start (measured 2026-08-13: nmpc_pred_ey_end reached -1.9 m
-    # while v_actual was still ~0). The dynamic branch's own OUTPUT
-    # (v_y_dot_dyn/r_dot_dyn) is already blended out by `blend` below, but
-    # that happens too late to stop the force itself from existing --
+    # which can snap the NMPC's steering command to full mechanical lock in
+    # the first ~0.5-0.7s from a standing start (seen in simulation:
+    # nmpc_pred_ey_end reached -1.9 m while v_actual was still ~0). The
+    # dynamic branch's own OUTPUT (v_y_dot_dyn/r_dot_dyn) is already blended
+    # out by `blend` below, but
+    # that happens too late to stop the force itself from existing, so
     # F_yf/F_yr must be scaled here, at the source, not just downstream.
     F_yf = F_yf * blend
     F_yr = F_yr * blend
@@ -796,8 +770,8 @@ def _outputs(X, ref, p, v_ref, horizon_speed_profile_enabled=False,
     Jacobian pass _output_jacobians already runs for the cost rows, but are
     NEVER part of the cost themselves (see NMPCController._solve_step's
     w_out slicing) -- only used to build the friction-circle QP constraint.
-    Shape is IDENTICAL to before this feature existed when the flag is
-    False (not just "the extra rows are empty").
+    When the flag is False the shape has no extra rows at all (not just
+    empty extra rows).
     """
     e_y   = X[:, IDX_EY]
     e_psi = X[:, IDX_EPSI]
@@ -855,8 +829,8 @@ def _rrate_zone_scale(kappa_now, kappa_ahead, k, boost_straight, ease_approach,
 
     CAUTION on `k`: the ease/floor endpoints are only REACHED as
     `_corner_factor` approaches 1, so this schedule is only as strong as `k`
-    lets it saturate over the TRACK's curvature range. At the LTV-QP's
-    inherited k=8.0 a track whose tightest corner is |kappa|~0.2 tops
+    lets it saturate over the TRACK's curvature range. At the inherited
+    default k=8.0 a track whose tightest corner is |kappa|~0.2 tops
     `_corner_factor` out near 0.63, which silently degrades this from a
     three-zone schedule into a mild global rate boost -- the multiplier never
     leaves the boost band. Check a run's `m_Rrate_zone` column against
@@ -866,9 +840,9 @@ def _rrate_zone_scale(kappa_now, kappa_ahead, k, boost_straight, ease_approach,
     CAUTION on `kappa_ahead`: this is the peak |kappa| the horizon predicts,
     which leads current curvature by roughly the horizon length. Against a
     static raceline that is a clean signal. Against a LIVE planner path it
-    inherits the open centreline curvature-spike defect, and unlike a speed
-    target there is no rate limiter downstream to absorb a spurious spike --
-    re-validate before trusting this with use_planner=True.
+    inherits any curvature spikes in the planner's centreline, and unlike a
+    speed target there is no rate limiter downstream to absorb a spurious
+    spike. UNVERIFIED with a live planner path on the car or kart.
     """
     now = _corner_factor(abs(kappa_now), k)
     ahead = _corner_factor(abs(kappa_ahead), k)
@@ -891,17 +865,15 @@ def _rrate_stage_ramp(N, near):
     early input, which is why a high flat weight makes the solver defer
     turn-in until it must catch up at the actuator slew limit.
 
-    Ramping by STAGE is keyed on horizon POSITION, not measured state -- a
-    measured-state schedule (curvature/error) was live-tested and failed
-    because ~27% of jerk events show no curvature or heading-error signal at
-    all one second beforehand, while the horizon already predicts the corner.
+    Ramping by STAGE is keyed on horizon POSITION, not measured state. In
+    simulation a measured-state schedule (curvature/error) failed because
+    many jerk events show no curvature or heading-error signal one second
+    beforehand, while the horizon already predicts the corner.
 
-    CAUTION: offline-rejected as a fix for that jerk -- it moved
-    slew-limited ticks the WRONG way (8.4% -> 12-15%) because a cheaper
-    near-stage rate simply spends more of the slew budget every tick. It IS
-    the only change found so far that clears the offline nmpc_offline_check
-    DNF, which is why it is kept. See
-    fsae_MPCTest/docs/steering_turn_in_upgrade_options.md (Option 1).
+    CAUTION: in simulation this did not fix that jerk. It increased
+    slew-limited ticks, because a cheaper near-stage rate spends more of the
+    slew budget every tick. It is kept because it avoided a did-not-finish
+    case in simulation. UNVERIFIED on the car or kart.
 
     `near` = 1.0 is an exact no-op, so the flag-off path is byte-identical.
     """
@@ -932,8 +904,7 @@ def _csc_pattern(mask):
 
 class NMPCController:
     """
-    Frenet-frame nonlinear MPC, drop-in compatible with
-    mpc_core.MPCController's node-facing surface: compute(), reset(),
+    Frenet-frame nonlinear MPC. Node-facing surface: compute(), reset(),
     set_static_path(), set_heading_profile(), last_telemetry, a_max,
     a_max_brake.
     """
@@ -949,24 +920,23 @@ class NMPCController:
         max_steer_rad: float | None = None,
     ) -> None:
         """
-        dt must equal the calling node's control period (0.05 s), as for
-        MPCController. N defaults to NMPCParams.nmpc_horizon (35, matching
-        MPCController's own horizon so horizon length is never a confound when
-        comparing the two); an explicit N overrides it. `logger` is an optional
+        dt must equal the calling node's control period (0.05 s). N defaults
+        to NMPCParams.nmpc_horizon (35); an explicit N overrides it. `logger`
+        is an optional
         rclpy logger for the one-time informational messages; print() is used
         when it is None so this module stays importable/testable outside ROS.
 
         `plant_overrides` replaces named _Plant fields (e.g. lf, lr,
-        v_blend_lo, v_blend_hi) for a vehicle other than the FSDS car, and
-        `max_steer_rad` replaces control_limits.MAX_STEER_RAD as the steering
-        bound. Both default to the FSDS values, so the sim tree's behaviour
-        is unchanged when they are omitted. An unknown _Plant field name
-        raises TypeError rather than being ignored.
+        v_blend_lo, v_blend_hi) for a vehicle other than the simulated car
+        model (the go-kart), and `max_steer_rad` replaces
+        control_limits.MAX_STEER_RAD as the steering bound. When omitted, the
+        simulated car's defaults apply (UNVERIFIED for the real car). An
+        unknown _Plant field name raises TypeError rather than being ignored.
         """
         if osqp is None:      # pragma: no cover - dependency guard
             raise ImportError(
-                'nmpc_core requires osqp (already a documented dependency of '
-                f'mpc_core via cvxpy — see package.xml): {_OSQP_IMPORT_ERROR!r}'
+                'nmpc_core requires osqp (pip install osqp, see requirements.txt '
+                f'and package.xml): {_OSQP_IMPORT_ERROR!r}'
             )
 
         self.dt = float(dt)
@@ -979,15 +949,13 @@ class NMPCController:
 
         self.nx, self.nu = NX, NU
         nm0 = nmpc if nmpc is not None else DEFAULT_NMPC_PARAMS
-        # alat_ceiling_flat/_slope/_intercept are FSDS's measured plant
-        # constant (the sustained lateral-accel ceiling law), not a tuning
-        # weight -- MPCParams no longer carries them (removed along with the
-        # whole corner_demand/lookahead-gain-scheduling family they used to
-        # parameterise), so _Plant's own hardcoded defaults (7.5/0.47/2.46,
-        # the same measured values) are used directly here, the same
-        # precedent this class already follows for lf/lr/m/Iz/Cf/Cr. Only
-        # nmpc_alat_ceiling_enabled (a genuine NMPC-only on/off switch, not a
-        # shared plant constant) still comes from NMPCParams.
+        # alat_ceiling_flat/_slope/_intercept are plant constants (the
+        # sustained lateral-accel ceiling law measured in simulation), not
+        # tuning weights, so _Plant's own defaults (7.5/0.47/2.46) are used
+        # directly, as for lf/lr/m/Iz/Cf/Cr. Only the on/off switch,
+        # nmpc_alat_ceiling_enabled, comes from NMPCParams (false for real
+        # vehicles by default; UNVERIFIED whether any real vehicle has such a
+        # limit).
         self.plant = replace(
             _Plant(alat_ceiling_enabled=bool(nm0.nmpc_alat_ceiling_enabled)),
             **(plant_overrides or {}))
@@ -995,7 +963,7 @@ class NMPCController:
             raise ValueError('plant v_blend_hi must exceed v_blend_lo '
                              f'(got {self.plant.v_blend_lo}, {self.plant.v_blend_hi})')
         self.max_steer_rad = float(MAX_STEER_RAD if max_steer_rad is None else max_steer_rad)
-        # Convenience aliases so telemetry/geometry code reads like mpc_core's.
+        # Convenience aliases for telemetry/geometry code.
         self.lf, self.lr = self.plant.lf, self.plant.lr
 
         # ── Experimental feature flags (see nmpc_params.py's comments) ───
@@ -1003,14 +971,14 @@ class NMPCController:
         self.horizon_speed_profile_enabled = bool(nm0.nmpc_horizon_speed_profile_enabled)
         self.friction_circle_enabled = bool(nm0.nmpc_friction_circle_enabled)
         if self.friction_circle_enabled:
-            # F_max = m * ceiling(v_x) / 2 per axle: the measured ceiling law
+            # F_max = m * ceiling(v_x) / 2 per axle: the ceiling law
             # bounds TOTAL lateral force (F_yf*cos(d) + F_yr) / m, split
             # evenly across the two axles as a simple, symmetric per-axle
             # cap (the soft mechanism in _f/_f_scalar scales both axles by
             # the SAME factor too, so this keeps the same even-split
             # convention rather than inventing a front/rear bias). This is a
             # HARD, ADDITIONAL bound alongside (not instead of) that
-            # existing soft tanh saturation.
+            # soft tanh saturation.
             self._fmax_flat = 0.5 * self.plant.m * self.plant.alat_ceiling_flat
             self._fmax_slope = 0.5 * self.plant.m * self.plant.alat_ceiling_slope
             self._fmax_intercept = 0.5 * self.plant.m * self.plant.alat_ceiling_intercept
@@ -1018,21 +986,20 @@ class NMPCController:
         self.speed_limit_margin = float(nm0.nmpc_speed_limit_margin)
         self.speed_limit_slack_weight = float(nm0.nmpc_speed_limit_slack_weight)
 
-        # ── Limits: identical to MPCController's ────────────────────────
+        # ── Limits (simulated car defaults, UNVERIFIED on the car) ──────
         self.a_max = MAX_ACCEL
         self.a_max_brake = MAX_BRAKE
         self.u_min = np.array([-self.max_steer_rad, -self.a_max_brake])
         self.u_max = np.array([self.max_steer_rad, self.a_max])
-        # 180 deg/s * dt, matching MPCController's du_max exactly (see that
-        # constructor's long note on why it is 180 and not 190).
+        # Steering slew limit 180 deg/s * dt. Taken from the simulated car;
+        # UNVERIFIED against the real steering actuator.
         self.du_max = np.array([math.radians(180.0) * self.dt, 0.6])
 
         # ── Weights: MPCParams, with per-NMPC overrides ─────────────────
         # The override fields (nmpc_q_e_y, ...) live in MPCParams itself
         # (see mpc_params.py's "NMPC weight overrides" section), alongside the base
         # fields they inherit from when left at -1.0. NMPCParams (self.nmpc)
-        # no longer carries any weight field at all — only structural/
-        # solver settings.
+        # carries no weight fields, only structural/solver settings.
         def _pick(override, inherited):
             return float(inherited if override is None or override < 0.0 else override)
 
@@ -1053,8 +1020,8 @@ class NMPCController:
         ])
         self.terminal_scale = _pick(pm.nmpc_terminal_scale, pm.terminal_q_scale)
 
-        # Independent of steer_rate_anti_hunt_enabled (the LTV-QP's own
-        # flag) — see nmpc_params.py/mpc_params.py's field comments and the
+        # Independent of steer_rate_anti_hunt_enabled (a separate flag not
+        # read by the NMPC). See mpc_params.py's field comments and the
         # module docstring's "WHAT THIS CONTROLLER DELIBERATELY DOES NOT DO"
         # for why this is opt-in and separately defaulted False.
         self.steer_rate_anti_hunt_enabled = bool(pm.nmpc_steer_rate_anti_hunt_enabled)
@@ -1108,7 +1075,7 @@ class NMPCController:
         self.standstill_steer_r_scale = float(
             self.nmpc.nmpc_standstill_steer_r_scale)
 
-        # ── Continuity memory (mirrors MPCController's) ─────────────────
+        # ── Continuity memory ───────────────────────────────────────────
         self._delta_act = 0.0
         self._a_act = 0.0
         self._u_prev = np.zeros(NU)
@@ -1137,7 +1104,7 @@ class NMPCController:
         self._build_qp()
 
     # ------------------------------------------------------------------
-    # Node-facing hooks (same names/semantics as MPCController's)
+    # Node-facing hooks
     # ------------------------------------------------------------------
     def _log(self, msg: str) -> None:
         if self._logger is not None:      # pragma: no cover - ROS path
@@ -1148,8 +1115,8 @@ class NMPCController:
     def set_static_path(self, path, path_v_xy=None, path_v=None) -> None:
         """
         Precompute the arc-length/curvature reference for a fixed path, once,
-        at load time. Called by the owning node exactly where it calls
-        MPCController.set_static_path(); compute() never builds this itself for
+        at load time. Called by the owning node when a static path is loaded;
+        compute() never builds this itself for
         a static path (it looks the cached one up by signature).
 
         path=None clears it (live-planner mode), in which case compute() builds
@@ -1157,9 +1124,9 @@ class NMPCController:
 
         `path_v_xy`/`path_v` (optional, NMPCParams.nmpc_horizon_speed_profile_enabled):
         the precomputed per-lap speed profile's own (x, y) points and target
-        speeds — a SEPARATE array from `path` (the node's self._static_path
-        and self._speed_profile are loaded from two different CSVs; see
-        PathReference.v_ref_at's docstring) — passed straight through.
+        speeds, a SEPARATE array from `path` (the node's static path and
+        speed profile are loaded from two different CSVs; see
+        PathReference.v_ref_at's docstring), passed straight through.
         """
         if path is None or len(np.asarray(path)) < 3:
             self._static_ref = None
@@ -1184,8 +1151,8 @@ class NMPCController:
 
     def set_heading_profile(self, psi_target) -> None:
         """
-        Accepted and IGNORED — see the module docstring. The shaped
-        heading-lead profile (Part 8/9) is a workaround for the missing
+        Accepted and IGNORED, see the module docstring. The shaped
+        heading-lead profile is a workaround for the missing
         curvature term this controller models directly, so applying both would
         double-count the anticipation. Logged once so a launch config that
         enables use_precomputed_heading_profile alongside use_nmpc does not
@@ -1200,7 +1167,7 @@ class NMPCController:
             )
 
     def reset(self) -> None:
-        """Clear continuity state, as MPCController.reset() does."""
+        """Clear continuity state."""
         self._delta_act = 0.0
         self._a_act = 0.0
         self._u_prev = np.zeros(NU)
@@ -1240,8 +1207,7 @@ class NMPCController:
         stage k's tyre force depends on every earlier input through S).
         Read ONCE here, at construction time, like _use_slack — NOT
         per-tick — since it changes the QP's fixed sparsity pattern. When
-        False, n_rows/nz and every array below are IDENTICAL to before this
-        feature existed.
+        False, n_rows/nz and every array below carry no friction rows.
 
         Speed-limit rows (6)-(7) (self.speed_limit_enabled, see
         NMPCParams.nmpc_speed_limit_enabled): a SEPARATE one-sided soft bound
@@ -1277,7 +1243,7 @@ class NMPCController:
         # operator twice gives du_k - du_{k-1}, i.e. steering ACCELERATION.
         # The plain rate cost charges by |du|, identical for a sustained ramp
         # into a corner and for one leg of an oscillation, so it cannot damp
-        # hunting without also resisting turn-in. Measured live, reversals
+        # hunting without also resisting turn-in. In simulation, reversals
         # carry ~4.3x the |d2| of same-direction ramps vs only ~1.9x the
         # |d1|. A steady ramp is therefore nearly free here; a wiggle is not.
         # No OSQP sparsity change: p_mask[:n_du,:n_du] is already a dense
@@ -1487,8 +1453,7 @@ class NMPCController:
         When self.friction_circle_enabled, H0/C carry NH_FRICTION extra rows
         (F_yf, F_yr — see _outputs' docstring), riding along through this
         SAME finite-difference pass at no extra rollout cost. Shape is
-        (stages, NH, NX) when the flag is False, IDENTICAL to before this
-        feature existed.
+        (stages, NH, NX) when the flag is False.
         """
         H0 = _outputs(X, ref, self.plant, v_ref,
                       horizon_speed_profile_enabled=self.horizon_speed_profile_enabled,
@@ -1523,11 +1488,12 @@ class NMPCController:
         nmpc_standstill_speed, then ramped linearly to 1.0 (no damping) at
         nmpc_standstill_fade_speed. A hard release instead of a fade puts the
         full weight change into a single tick exactly when the car is most
-        sensitive: measured live, steering ran from -1.8 to -12.9 deg over
+        sensitive: in simulation, steering ran from -1.8 to -12.9 deg over
         the six ticks immediately after the release, roughly -2 deg/tick
         sustained, which is the launch excursion this damping exists to
         prevent, reappearing a moment later. Setting fade_speed <= speed
-        restores the old hard cutoff.
+        gives a hard cutoff. Speeds and scale tuned in simulation; UNVERIFIED
+        on the car or kart.
 
         Shared by _solve_step (which builds the QP) and _cost (which scores
         backtracking trials) so the two cannot disagree -- scoring a
@@ -1575,8 +1541,8 @@ class NMPCController:
         a = U[:, 1]
         # Stage 0's steering weight can differ from the rest (standstill
         # damping) -- see _r_delta_stage0. Written as the flat term plus a
-        # stage-0 correction so the flag-off path is bit-identical to the
-        # original single-multiply expression.
+        # stage-0 correction so the flag-off path reduces exactly to a
+        # single flat multiply.
         eff = float(self.r_delta * np.sum(U[:, 0] ** 2)
                     + (self._r_delta_stage0(X) - self.r_delta) * U[0, 0] ** 2
                     + self.r_a_accel * np.sum(np.maximum(a, 0.0) ** 2)
@@ -1792,10 +1758,9 @@ class NMPCController:
         status = str(res.info.status).lower()
         # Status MUST be checked, not just finiteness: on a primal-infeasible
         # or otherwise failed subproblem OSQP returns a finite but MEANINGLESS
-        # x, and taking it as a step direction is exactly how this controller
-        # first diverged in offline testing (a wrong-way full-lock ramp built
-        # up over ~20 ticks, each moving the full slew limit in the garbage
-        # direction — see late_turn_in_investigation.md Part 16 §16.6).
+        # x. Taking it as a step direction can make the controller diverge
+        # into a wrong-way full-lock ramp, each tick moving the full slew
+        # limit in the garbage direction (seen in simulation).
         # 'solved inaccurate' / 'maximum iterations reached' ARE accepted:
         # they are still descent directions in practice, and the caller
         # validates every step against the true nonlinear cost before keeping
@@ -1813,11 +1778,9 @@ class NMPCController:
         """
         Filtered, hysteresis-gated rollforward depth from a measured pose age.
 
-        Deliberate duplicate of MPCController._update_n_delay (same MPCParams
-        fields, same arithmetic): that method is bound to the LTV-QP
-        controller's own state, and refactoring it out would mean editing
-        mpc_core.py's live solve path, which this feature is specifically
-        designed not to touch. Keep the two in sync if either changes.
+        Uses MPCParams.max_delay_compensation_steps, pose_age_lp_alpha and
+        n_delay_hysteresis. Delay parameters were tuned in simulation;
+        UNVERIFIED against the real vehicle's pose latency.
         """
         age = max(0.0, float(pose_age_s))
         cap = self.params.max_delay_compensation_steps
@@ -1848,16 +1811,15 @@ class NMPCController:
     ) -> tuple[float, float, float]:
         """
         Run one NMPC control step. Signature, units, return convention
-        ((steering in [-1,1], throttle in [0,1], brake in [0,1])) and the
-        short-path guard are all identical to MPCController.compute(), so the
-        calling nodes need no branch beyond which object they construct.
+        (steering in [-1,1], throttle in [0,1], brake in [0,1]). Returns a
+        safe (0, 0, 0.5) brake command when the path is too short.
         """
         if path is None or len(path) < 3:
             return 0.0, 0.0, 0.5
 
         t0 = time.perf_counter()
 
-        # Same first-order target-speed filter as MPCController.compute().
+        # First-order low-pass filter on the target speed.
         alpha = 0.08
         if self._v_des_filtered is None:
             self._v_des_filtered = desired_speed
@@ -1878,18 +1840,15 @@ class NMPCController:
             self._delta_act, self._a_act,
         ])
 
-        # ── Corner-blend / anti-hunt (EXPERIMENTAL, default off — see module
-        # docstring) — ALTERNATIVES, not composed: the corner-factor blend
+        # ── Corner-blend / anti-hunt (EXPERIMENTAL, default off, see module
+        # docstring). ALTERNATIVES, not composed: the corner-factor blend
         # takes priority when both are enabled (skips anti-hunt entirely in
-        # that case). Same signals/functions as the LTV-QP path (imported
-        # verbatim from mpc_core, not reimplemented). Computed once per
+        # that case). Functions come from control_limits.py. Computed once per
         # compute() call (this tick's measured state), and applied UNIFORMLY
-        # across the whole horizon for this tick's solve — not a function of
-        # horizon step, so neither schedules a future obligation the way the
-        # deleted lookahead family did. self._Rr_flat/self._ErE are
-        # ordinarily fixed at _build_qp() time; when both flags are off
-        # (default), neither is touched here, so behaviour is byte-identical
-        # to before either feature existed.
+        # across the whole horizon for this tick's solve, not as a function
+        # of horizon step, so neither schedules a future obligation.
+        # self._Rr_flat/self._ErE are ordinarily fixed at _build_qp() time;
+        # when every flag below is off (default), neither is touched here.
         kappa_now = float(ref.kappa_at(np.array([s0]))[0])
         m_rrate_antihunt = 1.0
         # Always computed (not gated behind corner_rrate_blend_enabled) --
@@ -1901,9 +1860,8 @@ class NMPCController:
         # Tracks R_rate[0,0]'s running value through the if/elif AND the
         # reversal-penalty composition below, so the reversal penalty (which
         # applies regardless of which branch ran) boosts whatever value is
-        # actually current rather than always the pre-if/elif base -- the
-        # same silent-discard bug already found and fixed twice tonight in
-        # mpc_core.py's own corner-blend/anti-hunt composition.
+        # current rather than always the pre-if/elif base. Using the base
+        # would silently discard the corner-blend/anti-hunt result.
         rrate_steer_current = rrate_steer_corner_blend
         if self.corner_rrate_blend_enabled:
             rrate_steer_corner_blend = _blend(
@@ -1940,10 +1898,8 @@ class NMPCController:
             self._ErE = self._E.T @ (Rr_flat[:, None] * self._E)
 
         # ── Delay compensation (nonlinear rollforward) ──────────────────
-        # Same trigger/depth logic as the LTV-QP path, but rolled forward
-        # through the NONLINEAR model instead of predict_ahead()'s linear
-        # Ad/Bd — the model is right here, so there is no reason to use a
-        # linearisation for it.
+        # Rolled forward through the NONLINEAR model rather than a linear
+        # Ad/Bd approximation, since the model is available here.
         if self.params.delay_compensation_enabled:
             n_delay = self._update_n_delay(pose_age_s)
             if n_delay > 0 and self._u_history:
@@ -2026,12 +1982,11 @@ class NMPCController:
                                  horizon_speed_profile_enabled=self.horizon_speed_profile_enabled,
                                  friction_circle_enabled=self.friction_circle_enabled)
                 cost_try = self._cost(X_try, U_try, H_try, ref)
-                # ONLY a genuine improvement is accepted. Accepting the
-                # smallest trial regardless (an earlier version of this loop
-                # did, "so a tick always makes progress") means a bad search
-                # direction is written into the warm start and carried into the
-                # next tick — which is how a single failed subproblem grew into
-                # a divergent wrong-way full-lock ramp in offline testing.
+                # ONLY an improvement is accepted. Accepting the smallest
+                # trial regardless writes a bad search direction into the
+                # warm start and carries it into the next tick, which lets a
+                # single failed subproblem grow into a divergent wrong-way
+                # full-lock ramp (seen in simulation).
                 # Rejecting leaves U at the previous tick's shifted solution,
                 # which is always feasible and always sane.
                 if cost_try <= cost:
@@ -2051,7 +2006,7 @@ class NMPCController:
         self._U = U
         self._have_warm_start = True
 
-        # ── Ship u[0], hard-limited exactly as the LTV-QP path is ──────
+        # ── Ship u[0], hard-limited to input bounds and slew rate ───────
         u_opt = np.clip(U[0], self.u_min, self.u_max)
         u_opt = np.clip(u_opt, self._u_prev - self.du_max, self._u_prev + self.du_max)
         self._u_history.append(u_opt.copy())
@@ -2079,13 +2034,10 @@ class NMPCController:
 
         solve_ms = (time.perf_counter() - t0) * 1e3
 
-        # Telemetry: the keys mpc_core publishes keep their exact meaning (so
-        # every existing offline analysis script and telemetry_logger column
-        # still works), plus nmpc_* diagnostics. kappa/kappa_max_abs are
-        # recomputed here from the SAME kappa(s) reference the prediction used
-        # — kappa at the car, and peak |kappa| over the horizon's own predicted
-        # arc length, which is the NMPC's natural analogue of the LTV-QP's
-        # speed-scaled lookahead window.
+        # Telemetry: common tracking keys plus nmpc_* diagnostics.
+        # kappa/kappa_max_abs are recomputed here from the SAME kappa(s)
+        # reference the prediction used: kappa at the car, and peak |kappa|
+        # over the horizon's own predicted arc length.
         kap_horizon = ref.kappa_at(X[:, IDX_S])
         self.last_telemetry = {
             'e_y': float(e_y),
@@ -2098,10 +2050,9 @@ class NMPCController:
             'm_Rrate_reversal': m_rrate_reversal,
             'm_Rrate_zone': m_rrate_zone,
             'corner_frac': corner_frac,
-            # The FINAL, fully-composed R_rate[0,0] actually used this tick
-            # -- same semantic as mpc_core.py's own Rrate_steer_corner_blend
-            # column (post corner-blend AND anti-hunt AND reversal-penalty),
-            # not just the corner-blend stage in isolation.
+            # The FINAL, fully-composed R_rate[0,0] used this tick (post
+            # corner-blend AND anti-hunt AND reversal-penalty), not just the
+            # corner-blend stage in isolation.
             'Rrate_steer_corner_blend': rrate_steer_current,
             'pose_age_s': float(pose_age_s),
             'n_delay': int(n_delay),
@@ -2115,7 +2066,7 @@ class NMPCController:
             'a_cmd': a_cmd,
             'delta_act': float(self._delta_act),
             'a_act': float(self._a_act),
-            # NMPC-specific: see telemetry_logger.NMPC_COLUMNS.
+            # NMPC-specific diagnostics.
             'nmpc_iters': int(iters),
             'nmpc_cost': float(cost),
             'nmpc_status': 1.0 if status.lower().startswith('solved') else 0.0,
