@@ -87,7 +87,9 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
 
-from fsae_control.control_utils import curvature_speed, tracking_error_speed_gate
+from fsae_control.control_utils import (
+    curvature_speed, path_end_speed_cap, tracking_error_speed_gate,
+)
 from fsae_control.mpc.nmpc_core import NMPCController
 from fsae_control.mpc.mpc_params import declare_mpc_params, mpc_params_from_node
 from fsae_control.mpc.nmpc_params import declare_nmpc_params, nmpc_params_from_node
@@ -165,6 +167,13 @@ class NMPCControllerNode(Node):
                 # value, not a validated constant -- expect to retune on the
                 # rig.
                 ('accel_to_speed_horizon_s', 0.25),   # s
+                # Stop at the end of the path: the speed target is capped so the car
+                # can still stop path_end_margin_m before the last waypoint at
+                # path_end_decel, allowing path_end_lag_s of tracking lag. 0 disables. Comfort values, UNVERIFIED on the car or
+                # kart. See control_utils.path_end_speed_cap.
+                ('path_end_decel', 1.5),      # m/s^2
+                ('path_end_margin_m', 0.5),   # m
+                ('path_end_lag_s', 1.0),      # s, allowance for the NMPC's speed-tracking lag
                 # State inputs. Defaults keep the original topic contract; the
                 # go-kart launch (nmpc_gokart.launch.py) overrides them.
                 ('odom_topic', '/fsae/slam/car_odom'),
@@ -199,6 +208,9 @@ class NMPCControllerNode(Node):
         self._accel_to_speed_horizon_s = self.get_parameter(
             'accel_to_speed_horizon_s').get_parameter_value().double_value
         g = self.get_parameter
+        self._path_end_decel = g('path_end_decel').get_parameter_value().double_value
+        self._path_end_margin_m = g('path_end_margin_m').get_parameter_value().double_value
+        self._path_end_lag_s = g('path_end_lag_s').get_parameter_value().double_value
         odom_topic = g('odom_topic').get_parameter_value().string_value
         self._odom_velocity_source = g('odom_velocity_source').get_parameter_value().string_value
         if self._odom_velocity_source not in ('twist', 'pose_diff'):
@@ -604,6 +616,17 @@ class NMPCControllerNode(Node):
             desired_speed = min(desired_speed,
                                 max(self._v_des_prev,
                                     car_speed + SPEED_TARGET_DEFICIT_MAX))
+        # End of path. Applied last, after the v_min floor, so the target can reach 0.
+        # This lowers the speed the cost tracks (q_e_v); it is not a constraint, so the
+        # solver plans the braking itself within its acceleration limits.
+        v_end = path_end_speed_cap(
+            self._path, self._car_pos, car_speed, self._path_end_decel,
+            self._path_end_margin_m, self._path_end_lag_s)
+        if v_end < desired_speed:
+            desired_speed = v_end
+            self.get_logger().info(
+                f'Near the end of the path: speed target capped at {v_end:.2f} m/s',
+                throttle_duration_sec=1.0)
         self._v_des_prev = desired_speed
 
         # GAP A4: pose_age_s measures age since ARRIVAL, not since capture —

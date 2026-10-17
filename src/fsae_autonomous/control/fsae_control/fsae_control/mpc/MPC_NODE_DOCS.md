@@ -61,7 +61,7 @@ flowchart LR
         direction TB
         P1["1. Gate: pose present, path ≥ 2 points,<br/>path < 0.5 s old, path points ahead"]
         P2["2. State: v_x, v_y, yaw rate<br/>odom (+ IMU) → curr_vel → drive_status → last command"]
-        P3["Speed target: path curvature,<br/>tracking-error gate, rise limiter"]
+        P3["Speed target: path curvature,<br/>tracking-error gate, rise limiter,<br/>end-of-path cap"]
         P4["3. NMPC solve (nmpc_core)<br/>Frenet bicycle model, SQP + OSQP, N = 20"]
         P5["4. Cone-proximity override<br/>5. Command adapter: clamp steer,<br/>v = v_x + a·horizon"]
         SAFE["Safe-stop: zero command,<br/>frame_id nmpc_safe_stop"]

@@ -359,6 +359,48 @@ def curvature_speed(waypoints, v_max=15.0, v_min=1.5, a_lat_max=4.75,
     return float(np.clip(v_target, v_min, v_max))
 
 
+def remaining_path_length(waypoints, car_pos) -> float:
+    """Distance (m) along the polyline from the car's projection onto it to its last
+    point. 0 once the car is level with or past the end."""
+    pts = np.asarray(waypoints, dtype=np.float64)
+    if len(pts) < 2:
+        return 0.0
+    seg = np.diff(pts, axis=0)
+    seg_len = np.linalg.norm(seg, axis=1)
+    cum = np.concatenate([[0.0], np.cumsum(seg_len)])
+    i = int(np.argmin(np.linalg.norm(pts - np.asarray(car_pos, dtype=np.float64), axis=1)))
+    j = min(i, len(seg) - 1)   # segment starting at, or ending at, the nearest point
+    if seg_len[j] < 1e-9:
+        return max(0.0, float(cum[-1] - cum[i]))
+    along = float(np.dot(np.asarray(car_pos) - pts[j], seg[j]) / seg_len[j])
+    s_car = cum[j] + float(np.clip(along, 0.0, seg_len[j])) if j < len(seg) - 1 else cum[j] + along
+    return max(0.0, float(cum[-1] - s_car))
+
+
+def path_end_speed_cap(waypoints, car_pos, car_speed: float, decel: float,
+                       margin_m: float, lag_s: float) -> float:
+    """
+    Highest speed (m/s) from which the car can still stop `margin_m` before the end of
+    the path at a constant deceleration `decel` (m/s^2): sqrt(2 * decel * d), with
+    d = remaining path length - margin_m - car_speed * lag_s. 0 when d <= 0.
+
+    `lag_s` allows for the NMPC following a lowered speed target with a delay (its
+    reference low-pass and cost trade-off). In an offline closed-loop check on a
+    straight, lag_s 1.0 stopped the car at the margin from 3 and 6 m/s, while 0 ran
+    1.5-2.7 m past the end. UNVERIFIED on the car or kart.
+
+    The NMPC's speed target otherwise comes from path curvature alone and has no notion
+    of where the path ends, so without this cap it keeps asking for speed at the last
+    waypoint. The planner's path is open-ended on the move (it ends where the visible
+    cones end), so this also caps speed to what the visible path allows. `decel` is a
+    comfort value, not the car's braking limit. UNVERIFIED on the car or kart.
+    """
+    if decel <= 0.0:
+        return float('inf')
+    d = remaining_path_length(waypoints, car_pos) - margin_m - max(0.0, car_speed) * lag_s
+    return math.sqrt(2.0 * decel * d) if d > 0.0 else 0.0
+
+
 def dynamic_speed_cap(waypoints, v_max=15.0, v_min=1.5,
                       a_lat_max=3.2, safety=0.9):
     """

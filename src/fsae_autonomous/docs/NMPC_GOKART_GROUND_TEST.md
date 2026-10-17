@@ -170,12 +170,15 @@ error to reduce it. The effect shrinks with radius.
 
 ## Not done yet
 
-- **The NMPC does not slow down for the end of a path.** Its speed target comes from
-  path curvature only; it has no notion of where the path ends, and near the last
-  waypoint the node falls back to the whole path's curvature (on a straight, `v_max`).
-  On the kart the driver sets the speed, so this only shapes the NMPC's plan. A proposed
-  fix (not made): ramp the speed target to 0 once the remaining path is shorter than the
-  stopping distance.
+- **End of the path:** the speed target is capped so the car can stop
+  `path_end_margin_m` (0.5 m) before the last waypoint at `path_end_decel` (1.5 m/s²),
+  allowing `path_end_lag_s` (1.0 s) for the NMPC to follow a lowered target
+  (`control_utils.path_end_speed_cap`). It lowers the speed the cost tracks; it is not a
+  constraint. Offline closed-loop check on a straight: stops at the margin from 3 and
+  6 m/s. `path_end_decel: 0` turns it off. UNVERIFIED on the kart or car.
+  On the kart the driver sets the speed, so this only shapes the NMPC's plan. The
+  planner's path ends where the visible cones end, so the cap also limits the planned
+  speed to what the visible path allows.
 - **No throttle or brake from the NMPC.** `a_cmd` reaches `/fsae/control/accel_cmd` only.
 - **The cone-proximity brake does nothing here**: it zeroes the NMPC's speed command,
   which this test ignores. With no service brake either, the driver stops the kart by

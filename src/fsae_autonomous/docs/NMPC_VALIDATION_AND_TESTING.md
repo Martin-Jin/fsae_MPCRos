@@ -115,8 +115,9 @@ launch to run again. The path keeps being published, so the NMPC keeps solving a
 stationary car and its steering settles to a constant. Curved scenarios are short (the
 S-curve above is about 60 m), so lower `forward_speed_mps` for a longer run.
 
-The NMPC itself does not slow down for the end of a path: it has no notion of where the
-path ends. See "Not done yet" in [`NMPC_GOKART_GROUND_TEST.md`](NMPC_GOKART_GROUND_TEST.md).
+The NMPC's speed target drops to 0 as the car nears the end (the end-of-path cap, see
+"Not done yet" in [`NMPC_GOKART_GROUND_TEST.md`](NMPC_GOKART_GROUND_TEST.md)). On the
+bench the mocked car does not stop for it; watch `speed` on `nmpc_bench_cmd` fall to 0.
 
 ### What RViz shows (`use_viz:=true`)
 

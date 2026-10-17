@@ -366,7 +366,11 @@ curvature or speed).
 
 **Handling (compromise)**: `curvature_speed()` in `control_utils.py` derives a target
 speed from the live path's shape every tick, between `v_min` and `v_max`. The
-curvature-to-speed mapping is untuned for either vehicle. UNVERIFIED.
+curvature-to-speed mapping is untuned for either vehicle. UNVERIFIED. On top of that,
+`path_end_speed_cap` lowers the target so the car can stop before the path ends
+(`path_end_decel`, `path_end_margin_m`, `path_end_lag_s`). On the car this also caps speed
+to what the visible planner path allows, which may be lower than `v_max` with a short
+path. UNVERIFIED.
 
 ### C2: No recorded track
 
