@@ -4,10 +4,23 @@ Everything still to do, in order, to get the steering-only NMPC running on the k
 each box. The *why* behind each item is in
 [`NMPC_GOKART_GROUND_TEST.md`](NMPC_GOKART_GROUND_TEST.md); this page is the to-do list.
 
-**Status:** the code builds and passes its unit tests and a scripted node test on a PC
-(no kart, no sensors). It has **never run on the kart**. Every steering calibration value
-below is a placeholder until step 3 is done. The NMPC weights and the vehicle constants
-the launch does not override were tuned in simulation (UNVERIFIED on the kart).
+## Status: tested so far, and what is left
+
+| Check | Status |
+|---|---|
+| Unit tests (`colcon test --packages-select fsae_control`) | pass on a PC |
+| Scripted node test: NMPC + teleop NMPC mode with fake path/pose/odometry/IMU/pad | pass on a PC. Deadman, R1 mode, stale and safe-stop fallbacks, steering sign mapping |
+| Bench test (`nmpc_bench.launch.py`): end-of-path hold, no command to any vehicle | pass, run by hand on a PC |
+| Shadow mode (`nmpc_shadow.launch.py`) publishes only on its own topic | pass on a PC with scripted inputs |
+| End-of-path speed cap | offline closed-loop check only; in simulation with a live planner the speed stayed around 6 to 7 m/s, by design (UNVERIFIED on the kart) |
+| **Steering sweep, wheelbase, R1 index** (section 3) | **not done** |
+| **Sensor checks on the kart** (section 4) | **not done** |
+| **Shadow mode on the kart** (section 4b) | **not done** |
+| **NMPC steering the kart** (section 5) | **not done, never run on the kart** |
+
+Every steering calibration value below is a placeholder until section 3 is done. The
+NMPC weights and the vehicle constants the launch does not override were tuned in
+simulation (UNVERIFIED on the kart).
 
 ---
 
@@ -178,6 +191,10 @@ so nothing reaches the servo.
 - [ ] Release R1: the stick steers again. Release X: everything neutral.
 - [ ] Block the camera or stop the planner: within 0.3 s the steering goes to 0 and the
   throttle is cut.
+- [ ] With the planner running, the `nmpc_controller` log prints
+  `Near the end of the path: speed target capped at ...` often. That is the end-of-path
+  cap keeping the NMPC's planned speed to what the visible path allows; expected, and it
+  does not limit the kart (the driver sets the speed).
 - [ ] **On the ground at walking pace**, driver on R2, then build speed slowly. Expect the
   kart to run slightly wide in tight corners (about 0.5 m on a 6 m radius in an offline
   kinematic-model check; UNVERIFIED on the kart).
