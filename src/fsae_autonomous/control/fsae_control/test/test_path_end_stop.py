@@ -54,3 +54,16 @@ def test_nmpc_stops_before_the_end_of_a_straight():
     assert v < 0.3, f'still moving at {v:.2f} m/s'
     assert x < 30.0, f'ran past the end of the path (x = {x:.2f} m)'
     assert x > 28.5, f'stopped too early (x = {x:.2f} m)'
+
+
+def test_closed_loop_path_is_never_capped():
+    """A full lap (end within PATH_END_CLOSED_GAP_M of the start, at least
+    PATH_END_CLOSED_MIN_LENGTH_M long) has no end to stop at."""
+    from fsae_control.control_utils import path_is_closed_loop
+    s = np.linspace(0.0, 2.0 * math.pi * 0.98, 400)
+    lap = np.column_stack([20.0 * np.cos(s), 20.0 * np.sin(s)])     # 123 m, 2.5 m gap
+    assert path_is_closed_loop(lap)
+    assert path_end_speed_cap(lap, lap[-1], 5.0, 1.5, 0.5, 1.0) == math.inf
+    hairpin = lap[:40]                                              # short, open
+    assert not path_is_closed_loop(hairpin)
+    assert not path_is_closed_loop(STRAIGHT)

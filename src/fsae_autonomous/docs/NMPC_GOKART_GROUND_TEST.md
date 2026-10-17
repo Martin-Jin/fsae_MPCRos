@@ -175,7 +175,9 @@ error to reduce it. The effect shrinks with radius.
   allowing `path_end_lag_s` (1.0 s) for the NMPC to follow a lowered target
   (`control_utils.path_end_speed_cap`). It lowers the speed the cost tracks; it is not a
   constraint. Offline closed-loop check on a straight: stops at the margin from 3 and
-  6 m/s. `path_end_decel: 0` turns it off. UNVERIFIED on the kart or car.
+  6 m/s. A closed-loop (full-lap) path, whose end lies within 10 m of its start and
+  which is at least 50 m long, is never capped. `path_end_decel: 0` turns it off.
+  UNVERIFIED on the kart or car.
   On the kart the driver sets the speed, so this only shapes the NMPC's plan. The
   planner's path ends where the visible cones end, so the cap also limits the planned
   speed to what the visible path allows.

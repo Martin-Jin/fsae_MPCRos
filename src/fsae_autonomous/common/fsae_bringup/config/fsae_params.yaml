@@ -49,8 +49,9 @@ nmpc_controller:
     max_steer_angle: 30.0        # degrees; GAP B4 -- clamped against control_limits.MAX_STEER_RAD (25deg) at runtime
     accel_to_speed_horizon_s: 0.25   # s; GAP B3 -- untuned starting value, expect to retune on the rig
     # End of path: speed target capped so the car can stop path_end_margin_m before the
-    # last waypoint at path_end_decel, allowing path_end_lag_s of tracking lag. 0 decel
-    # disables. Comfort values, UNVERIFIED on the car or kart.
+    # last waypoint at path_end_decel, allowing path_end_lag_s of tracking lag. A
+    # closed-loop (full-lap) path is never capped. 0 decel disables. Comfort values,
+    # UNVERIFIED on the car or kart.
     path_end_decel: 1.5          # m/s^2
     path_end_margin_m: 0.5       # m
     path_end_lag_s: 1.0          # s

@@ -370,7 +370,7 @@ curvature-to-speed mapping is untuned for either vehicle. UNVERIFIED. On top of 
 `path_end_speed_cap` lowers the target so the car can stop before the path ends
 (`path_end_decel`, `path_end_margin_m`, `path_end_lag_s`). On the car this also caps speed
 to what the visible planner path allows, which may be lower than `v_max` with a short
-path. UNVERIFIED.
+path. A closed-loop (full-lap) path is never capped. UNVERIFIED.
 
 ### C2: No recorded track
 
