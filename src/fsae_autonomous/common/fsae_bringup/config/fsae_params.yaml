@@ -285,7 +285,9 @@ joystick_teleop:
     auto_steer_topic: ""
     button_auto_steer: -1
     auto_steer_timeout: 0.3     # s; older NMPC command -> steering 0, throttle 0
-    auto_steer_scale: 1.0       # actuator deg per NMPC road-wheel deg; NOT calibrated yet
+    auto_steer_sign: 1.0        # +1 if +S steers left; the kart launch passes -1 (+S = right, measured)
+    auto_steer_scale_left: 1.0  # ECU S per road-wheel degree, left; NOT calibrated yet
+    auto_steer_scale_right: 1.0 # ECU S per road-wheel degree, right; NOT calibrated yet
     # --- axis conditioning ---
     invert_steer: true          # +ve steering_angle = LEFT (ROS convention). MEASURED inverted
                                 # on this pad/rig 2026-09-19 - was false, stick was backwards.

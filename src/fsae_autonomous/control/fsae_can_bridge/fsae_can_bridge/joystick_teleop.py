@@ -35,12 +35,17 @@
 # NMPC steering mode (off unless auto_steer_topic and button_auto_steer are set; the go-kart
 # NMPC launch, nmpc_gokart.launch.py, sets both):
 #   X + R1 HELD     -> steering comes from the NMPC (auto_steer_topic, AckermannDriveStamped,
-#                      steering_angle in road-wheel degrees, scaled by auto_steer_scale).
-#                      Throttle and brake stay on the triggers, so the driver keeps speed.
+#                      steering_angle in road-wheel degrees, + = LEFT). Sent as
+#                      S = auto_steer_sign * auto_steer_scale_<side> * nmpc_deg, side = left
+#                      when nmpc_deg > 0. On the kart +S steers RIGHT (measured), so the kart
+#                      launch sets auto_steer_sign -1.
+#                      Throttle and brake stay on the triggers, so the driver keeps speed
+#                      (the kart ECU firmware currently has its brake actuator disabled, so
+#                      on the kart only the throttle trigger has an effect).
 #   X alone         -> ordinary manual steering. Do the go handshake this way: it needs
 #                      steering at exactly 0, which a live NMPC command never is.
 #   NMPC stale (older than auto_steer_timeout) or in safe-stop (frame_id 'nmpc_safe_stop')
-#                   -> steering 0 and throttle 0 while R1 is held; the brake trigger still works.
+#                   -> steering 0 and throttle 0 while R1 is held; the brake trigger is passed on.
 #
 # The one guard kept: if /joy stops arriving (pad unplugged / out of range), cmd_vel goes to 0
 # and actuator_cmd stops, rather than latching the last command. joy does not signal a
@@ -94,10 +99,16 @@ class JoystickTeleop(Node):
                 ('auto_steer_topic', ''),
                 ('button_auto_steer', -1),
                 ('auto_steer_timeout', 0.3),     # s; an older NMPC command counts as lost
-                # actuator degrees per NMPC road-wheel degree. The ECU protocol defines S as
-                # road-wheel degrees, but its servo mapping (STEER_MAX_DEG = 180) is not yet
-                # calibrated against the wheels, so check this on the rig before trusting it.
-                ('auto_steer_scale', 1.0),
+                # +1 if +S steers LEFT, -1 if +S steers RIGHT. The NMPC is + = LEFT. On the
+                # kart +S steers RIGHT (measured 2026-10-14, matches invert_steer: true), so
+                # nmpc_gokart.launch.py passes -1. The ECU firmware comment (+S = left) is wrong
+                # for this kart.
+                ('auto_steer_sign', 1.0),
+                # ECU S units per road-wheel degree, per side: the firmware's S -> pulse map is
+                # asymmetric (-180 spans 1403 us, +180 only 847 us). UNMEASURED, see
+                # docs/NMPC_GOKART_GROUND_TEST.md.
+                ('auto_steer_scale_left', 1.0),
+                ('auto_steer_scale_right', 1.0),
 
                 # --- axis conditioning ---
                 ('invert_steer', False),         # ROS convention: +ve steering_angle = LEFT
@@ -126,7 +137,9 @@ class JoystickTeleop(Node):
         self.auto_steer_topic = g('auto_steer_topic').get_parameter_value().string_value
         self.button_auto_steer = g('button_auto_steer').get_parameter_value().integer_value
         self.auto_steer_timeout = g('auto_steer_timeout').get_parameter_value().double_value
-        self.auto_steer_scale = g('auto_steer_scale').get_parameter_value().double_value
+        self.auto_steer_sign = g('auto_steer_sign').get_parameter_value().double_value
+        self.auto_steer_scale_left = g('auto_steer_scale_left').get_parameter_value().double_value
+        self.auto_steer_scale_right = g('auto_steer_scale_right').get_parameter_value().double_value
         self.auto_steer_enabled = bool(self.auto_steer_topic) and self.button_auto_steer >= 0
         self.last_auto = None       # last NMPC AckermannDriveStamped
         self.last_auto_time = None
@@ -166,7 +179,9 @@ class JoystickTeleop(Node):
         if self.auto_steer_enabled:
             self.get_logger().info(
                 f'NMPC steering mode ON: hold X + button {self.button_auto_steer} to steer from '
-                f'{self.auto_steer_topic} (x{self.auto_steer_scale}); triggers keep throttle/brake')
+                f'{self.auto_steer_topic} (sign {self.auto_steer_sign:+.0f}, scale L '
+                f'{self.auto_steer_scale_left} / R {self.auto_steer_scale_right}); '
+                f'triggers keep throttle/brake')
 
     def auto_steer_callback(self, msg: AckermannDriveStamped):
         self.last_auto = msg
@@ -187,7 +202,9 @@ class JoystickTeleop(Node):
         age = (self.get_clock().now() - self.last_auto_time).nanoseconds * 1e-9
         if age > self.auto_steer_timeout or self.last_auto.header.frame_id == 'nmpc_safe_stop':
             return None
-        steer = self.auto_steer_scale * float(self.last_auto.drive.steering_angle)
+        nmpc_deg = float(self.last_auto.drive.steering_angle)
+        scale = self.auto_steer_scale_left if nmpc_deg > 0.0 else self.auto_steer_scale_right
+        steer = self.auto_steer_sign * scale * nmpc_deg
         if not math.isfinite(steer):
             return None
         return max(-self.max_angle, min(self.max_angle, steer))

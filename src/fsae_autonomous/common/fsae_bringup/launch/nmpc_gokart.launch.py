@@ -10,8 +10,9 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
 
-# Go-kart NMPC ground test: STEERING ONLY. The NMPC steers, the driver keeps throttle and
-# brake on the pad triggers. See docs/NMPC_GOKART_GROUND_TEST.md before running it.
+# Go-kart NMPC ground test: STEERING ONLY. The NMPC steers, the driver keeps the throttle
+# on the pad trigger. The ECU firmware's brake actuator is disabled, so L2 does not slow
+# the kart. See docs/NMPC_GOKART_GROUND_TEST.md before running it.
 #
 #   description + perception + slam + planning      (same stack as autonomous.launch.py)
 #   nmpc_controller  -> /fsae/control/nmpc_cmd       (NOT cmd_vel; nothing else reads it)
@@ -66,8 +67,14 @@ def generate_launch_description():
         DeclareLaunchArgument('button_auto_steer', default_value='5',
                               description='Joy button held (with X) for NMPC steering. 5 = R1 on '
                                           'the DS4 under hid-sony; check with ros2 topic echo /joy'),
-        DeclareLaunchArgument('auto_steer_scale', default_value='1.0',
-                              description='actuator deg per NMPC road-wheel deg (uncalibrated)'),
+        # +S steers RIGHT on the kart (measured 2026-10-14 on the Stanley steering test);
+        # the NMPC is + = LEFT, hence -1.
+        DeclareLaunchArgument('auto_steer_sign', default_value='-1.0',
+                              description='+1 if +S steers left, -1 if +S steers right'),
+        DeclareLaunchArgument('auto_steer_scale_left', default_value='1.0',
+                              description='ECU S per road-wheel degree, left (UNMEASURED)'),
+        DeclareLaunchArgument('auto_steer_scale_right', default_value='1.0',
+                              description='ECU S per road-wheel degree, right (UNMEASURED)'),
         DeclareLaunchArgument('plant_lf', default_value='0.86'),
         DeclareLaunchArgument('plant_lr', default_value='0.14'),
         DeclareLaunchArgument('plant_max_steer_deg', default_value='25.0',
@@ -122,7 +129,9 @@ def generate_launch_description():
                 'auto_steer_topic': '/fsae/control/nmpc_cmd',
                 'button_auto_steer': ParameterValue(
                     LaunchConfiguration('button_auto_steer'), value_type=int),
-                'auto_steer_scale': float_arg('auto_steer_scale'),
+                'auto_steer_sign': float_arg('auto_steer_sign'),
+                'auto_steer_scale_left': float_arg('auto_steer_scale_left'),
+                'auto_steer_scale_right': float_arg('auto_steer_scale_right'),
             }],
         ),
         Node(

@@ -1,9 +1,15 @@
 # NMPC go-kart ground test (steering only)
 
-**What runs today:** the NMPC steers the kart. The driver keeps throttle and brake on the
-pad triggers the whole time, and must hold the deadman. The NMPC's acceleration output
-is computed but not used. This is a first ground test of the steering loop, not
-autonomous driving.
+**What runs today:** the NMPC steers the kart. The driver keeps the throttle on the pad
+trigger the whole time, and must hold the deadman. The NMPC's acceleration output is
+computed but not used. This is a first ground test of the steering loop, not autonomous
+driving.
+
+> **There is no service brake.** In the current ECU firmware (`autonomous_gokart` `main`
+> and `feat/ground-testing`, `KART_BRAKE_ENABLED 0`) the brake actuator is disabled, and the
+> `B` field is only read for the go handshake. Pressing L2 does not slow the kart. To slow
+> down, release R2 and coast; to stop hard, release X (neutral) or pull the string e-stop
+> (cuts HV).
 
 One command brings up the full stack plus RViz:
 
@@ -25,8 +31,8 @@ Background on every NMPC compromise: [`NMPC_INTEGRATION_GAPS.md`](NMPC_INTEGRATI
 | nothing | 0 | 0 / 0 (`armed=false`) | parked; the ECU stays live |
 | **X** | left stick (manual) | triggers | the go handshake, manual driving |
 | **X + R1** | **NMPC** | triggers | the test itself |
-| X + R1, NMPC stale or in safe-stop | 0 | throttle **forced 0**, brake trigger still works | automatic fallback |
-| pad lost (no `/joy` for 0.25 s) | frames stop | frames stop | the ECU's 200 ms watchdog trips its failsafe |
+| X + R1, NMPC stale or in safe-stop | 0 | throttle **forced 0** | automatic fallback |
+| pad lost (no `/joy` for 0.25 s) | frames stop | frames stop | the ECU's command watchdog trips its failsafe (HV cut, steering limp). Its timeout depends on the flashed firmware: 200 ms on `main`, 500 ms on `feat/ground-testing`, 1 s on `feat/brake-control` |
 
 - **Go handshake** (at ECU boot or after any trip): hold X and the brake, stick centred,
   throttle off, for 3 s until the ECU prints READY, then let go of the brake. Do it with
@@ -90,21 +96,43 @@ laptop instead of the Jetson needs a remote-viz setup, which this branch does no
 | Track width | 0.90 m | same mesh, contact patches at y = ±0.45 | CAD only, not used by the NMPC |
 | ZED pitch | 7.70° down | ZED IMU gravity vector, URDF | measured |
 | Road-wheel steering limit | 25° (`plant_max_steer_deg`) | the FSDS value, kept as a placeholder | **unmeasured** |
-| Actuator degrees per road-wheel degree | 1.0 (`auto_steer_scale`) | ECU protocol says S is road-wheel degrees | **unverified**: the ECU maps ±180 servo degrees onto the full pulse range and is marked "to be changed to match servo tuning" |
+| Steering sign | `auto_steer_sign` −1: **+S steers RIGHT** | measured 2026-10-14 on the Stanley steering test (`test/planning-teleop-ground-test`), matches teleop's `invert_steer: true` | measured. The ECU firmware comment (+S = left) is wrong for this kart |
+| ECU S per road-wheel degree, left / right | 1.0 / 1.0 (`auto_steer_scale_left/right`) | placeholder | **unmeasured**. The firmware's S → pulse map is asymmetric (−180 spans 1403 µs, +180 only 847 µs), so each side needs its own value |
 | Steering lag `tau_delta` | 0.08 s | FSDS value | unmeasured |
 | Mass, yaw inertia, cornering stiffness | FSDS car's | not used: the model is kinematic below 8 m/s (`plant_v_blend_lo/hi` 8/9) | n/a for this test |
 
 ### Measurements still needed
 
-1. **Wheelbase**, tape-measured, front axle centre to rear axle centre. Then set
-   `plant_lf:=<wheelbase − 0.14>`.
-2. **Road-wheel steering lock**, left and right, at full servo travel. Sets
-   `plant_max_steer_deg`.
-3. **Steering calibration**: command `S10` and `S20` and measure the road-wheel angle,
-   both directions. The ratio gives `auto_steer_scale`. If the wheels do not reach 10°
-   and 20°, NMPC steering is wrong by that factor.
+None of these are recorded on `feat/teleop-node-ground-testing` or on
+`test/planning-teleop-ground-test`. The latter has the same values as placeholders
+(`steering_viz.wheelbase` 1.0, `stanley_controller.front_axle_dist` 1.0 "UNMEASURED guess",
+`stanley_scale_left/right` 1.0) and the bench procedure, which this branch now carries as
+[`scripts/steer_calibrate.py`](../scripts/steer_calibrate.py).
+
+1. **Steering calibration** (wheels off the ground, stack stopped):
+   `scripts/steer_calibrate.py` steps S through 0, ±30 … ±180 at 50 Hz with throttle and
+   brake hard-coded to 0. At each step, measure both front wheels' angle (a 1 m straight
+   edge on the wheel face: angle = atan(toe offset / 1 m)) and take the mean. Stop on a
+   side as soon as the wheels reach the mechanical lock. Then:
+   - `auto_steer_scale_left` / `_right` = S per road-wheel degree on each side, the slope
+     through the origin over the range the NMPC uses (up to the lock).
+   - `plant_max_steer_deg` = the full lock in road-wheel degrees, smaller side.
+   - teleop `max_angle` (in `fsae_params.yaml`) = S at full lock, if the lock comes before
+     ±180, so neither the stick nor the NMPC can stall the servo against the stop.
+   - Confirm the sign while there: +S should steer right.
+   - What the firmware does with S (`SteeringControl.cpp`, `feat/ground-testing`): S is
+     **not** road-wheel degrees. ±180 maps linearly onto each half of the pulse range
+     around the measured centre 1453 µs: −S toward 50 µs (7.79 µs per S), +S toward
+     2300 µs (4.71 µs per S). The servo's own potentiometer sets how far the wheels
+     actually travel. That asymmetry is why each side has its own scale.
+2. **Wheelbase**, rear axle centre to front axle centre. Then `plant_lf:=<wheelbase − 0.14>`.
+3. **R1 index**: hold R1 with `ros2 topic echo /joy` running and note which `buttons[]`
+   entry goes to 1. Pass `button_auto_steer:=<n>` if it isn't 5.
 4. Optional, for later speed work: steering response time (sets `tau_delta`), and the
    throttle-percent → acceleration map.
+
+The ZED offset (0.14 m ahead of the rear axle) is the tape-measured value in this branch's
+URDF. `test/planning-teleop-ground-test` still has an older 0.201 m in its URDF.
 
 ## Known behaviour on tight arcs
 
@@ -119,7 +147,9 @@ outside the line in tight corners.
 
 1. Wheels off the ground. Launch, check `/joy` indices, do the go handshake.
 2. Hold X + R1 with a path published. The steering should follow the NMPC arrow in RViz,
-   with the correct sign: a left bend steers left.
+   with the correct sign: a left bend steers left. The launch already passes
+   `auto_steer_sign:=-1` for the measured +S = right; if the wheels turn the wrong way,
+   stop and flip it.
 3. Release R1: manual steering returns. Release X: neutral.
 4. Pull the planner (or stop SLAM): steering must go to 0 and throttle to 0 within 0.3 s.
 5. On the ground at walking pace, the driver on the triggers, then build speed slowly.
@@ -128,10 +158,11 @@ outside the line in tight corners.
 
 - **No throttle or brake from the NMPC.** `a_cmd` reaches `/fsae/control/accel_cmd` only.
 - **The cone-proximity brake does nothing here**: it zeroes the NMPC's speed command,
-  which this test ignores. The driver is the brake.
+  which this test ignores. With no service brake either, the driver stops the kart by
+  releasing the throttle, releasing X, or pulling the e-stop.
 - The tyre model, mass and inertia are the FSDS car's.
-- The steering slew limit in the ECU firmware is off; `joystick_teleop.max_steer_rate`
-  is 0 (off) too.
-- Frozen-input check: the ECU trips if throttle and steering both stay unchanged for 5 s.
-  The NMPC's steering normally moves, but a long, perfectly straight run at constant
-  throttle could trip it.
+- The steering slew limit in the ECU firmware is a TODO (`MAX_STEER_RATE_DEG_S` unused),
+  and `joystick_teleop.max_steer_rate` is 0 (off) too, so the servo jumps to each command.
+- Frozen-input check: on `main` the ECU trips if throttle and steering both stay unchanged
+  for 5 s. A long, perfectly straight run at constant throttle could trip it.
+  `feat/ground-testing` disables this check (`KART_FROZEN_CHECK_ENABLED 0`).
