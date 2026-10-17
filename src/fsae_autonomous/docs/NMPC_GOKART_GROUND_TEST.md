@@ -19,8 +19,14 @@ ros2 launch fsae_bringup nmpc_gokart.launch.py use_gui:=true   # + NMPC telemetr
 ros2 launch fsae_bringup nmpc_gokart.launch.py use_rviz:=false # headless Jetson
 ```
 
+**To-do list for getting it running (measurements, checks, first runs):**
+[`NMPC_GOKART_BRINGUP_CHECKLIST.md`](NMPC_GOKART_BRINGUP_CHECKLIST.md).
+
 Launch file: [`common/fsae_bringup/launch/nmpc_gokart.launch.py`](../common/fsae_bringup/launch/nmpc_gokart.launch.py).
 Background on every NMPC compromise: [`NMPC_INTEGRATION_GAPS.md`](NMPC_INTEGRATION_GAPS.md).
+The node's inputs and outputs as a flow chart:
+[`MPC_NODE_DOCS.md`](../control/fsae_control/fsae_control/mpc/MPC_NODE_DOCS.md#inputs-and-outputs-flow-chart).
+Where it sits in the whole stack: [`ARCHITECTURE.md`](ARCHITECTURE.md) diagrams 1-3.
 
 ---
 

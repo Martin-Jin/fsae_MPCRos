@@ -30,22 +30,80 @@ colcon workspace, kept isolated from the sim tree for exactly this reason.
 | `mock_pose_path_publisher.py` | Hardware-free bench stimulus — see "Bench-testing with no car" below. |
 | `bench_scenarios.py` | Path-shape generators (`straight`/`gentle_turn`/`sharp_turn`/`s_curve`, plus a randomized-start offset) the mock publisher dispatches on — see "Test scenarios" below. |
 | `nmpc_bench.rviz` | RViz config for the bench rig: Fixed Frame `map`, the centerline + predicted-trajectory `MarkerArray` displays pre-added. Loaded automatically by `nmpc_bench.launch.py use_viz:=true`. |
+| `nmpc_gokart.rviz` | RViz config for the go-kart ground test (`nmpc_gokart.launch.py`): the bench displays plus the SLAM trajectory and a TF display. |
 | `nmpc_telemetry_gui.py` | Live matplotlib dashboard (bird's-eye car + predicted path + rolling error/command charts) — see "Live telemetry GUI" below. |
 
 ## How it fits into the pipeline
 
+### Inputs and outputs flow chart
+
+What goes into `nmpc_controller` and what comes out, at 20 Hz. Solid arrows are used on
+every launch; dashed arrows are optional or fallbacks. Topic names in `<angle brackets>`
+are node parameters: the car default is shown first, the go-kart launch
+(`nmpc_gokart.launch.py`) value second. The full repo wiring is diagram 2 of
+[`docs/ARCHITECTURE.md`](../../../../docs/ARCHITECTURE.md).
+
+```mermaid
+flowchart LR
+    classDef ext fill:#eee,stroke:#888,stroke-dasharray:3 3;
+    classDef opt stroke-dasharray:5 5;
+
+    subgraph IN["Inputs"]
+        PLAN["planner<br/>fasttube / centerline_planner"]
+        SLAM["cone_landmark_mapper<br/>(SLAM)"]
+        ZED(("zed_ros2_wrapper")):::ext
+        CAMN["cone_detection_node"]
+        CANIN(("CAN: can_decoder /<br/>external curr_vel")):::ext
+    end
+
+    subgraph NODE["nmpc_controller (fsae_control, 20 Hz timer)"]
+        direction TB
+        P1["1. Gate: pose present, path ≥ 2 points,<br/>path < 0.5 s old, path points ahead"]
+        P2["2. State: v_x, v_y, yaw rate<br/>odom (+ IMU) → curr_vel → drive_status → last command"]
+        P3["Speed target: path curvature,<br/>tracking-error gate, rise limiter"]
+        P4["3. NMPC solve (nmpc_core)<br/>Frenet bicycle model, SQP + OSQP, N = 20"]
+        P5["4. Cone-proximity override<br/>5. Command adapter: clamp steer,<br/>v = v_x + a·horizon"]
+        SAFE["Safe-stop: zero command,<br/>frame_id nmpc_safe_stop"]
+        P1 --> P2 --> P3 --> P4 --> P5
+        P1 -. "fails" .-> SAFE
+        P4 -. "solve fails" .-> SAFE
+    end
+
+    subgraph OUT["Outputs"]
+        CAR["ack_to_can → CAN<br/>(car)"]
+        TEL["joystick_teleop<br/>NMPC steering mode (go-kart)"]
+        NONE["no subscriber yet"]
+        PV["path_viz → RViz"]
+        GUI["nmpc_telemetry_gui"]
+    end
+
+    PLAN -->|"/fsae/planning/selected_trajectory<br/>PoseArray"| P1
+    SLAM -->|"/fsae/slam/car_position<br/>Pose (yaw in orientation.w)"| P1
+    ZED -->|"#lt;odom_topic#gt; Odometry<br/>/fsae/slam/car_odom or /zed/zed_node/odom"| P2
+    ZED -.->|"#lt;imu_topic#gt; Imu<br/>off or /zed/zed_node/imu/data"| P2
+    CANIN -.->|"/fsae/hardware/curr_vel, drive_status<br/>AckermannDriveStamped"| P2
+    CAMN -.->|"/fsae/perception/cone_detection<br/>ConeDetection"| P5
+
+    P5 -->|"#lt;cmd_topic#gt; AckermannDriveStamped<br/>/fsae/control/cmd_vel"| CAR
+    P5 -->|"#lt;cmd_topic#gt;<br/>/fsae/control/nmpc_cmd"| TEL
+    SAFE --> CAR
+    SAFE --> TEL
+    P5 -->|"/fsae/control/accel_cmd<br/>raw a_cmd"| NONE
+    P4 -.->|"/fsae/viz/nmpc_prediction_raw<br/>PoseArray (if enabled)"| PV
+    P4 -.->|"/fsae/viz/nmpc_telemetry<br/>String JSON (if enabled)"| GUI
 ```
-planner ──/fsae/planning/selected_trajectory──►┐
-SLAM ──────/fsae/slam/car_position─────────────►│
-(placeholder) /fsae/slam/car_odom ─────────────►│  nmpc_controller
-/fsae/hardware/curr_vel ────────────────────────►│  (this node)
-/fsae/hardware/drive_status ────────────────────►│
-/fsae/perception/cone_detection ────────────────►┘
-                                                   │
-                                                   ├──► /fsae/control/cmd_vel ──► ack_to_can ──► CAN bus
-                                                   ├──► /fsae/control/accel_cmd  (placeholder, unconsumed)
-                                                   └──► /fsae/viz/nmpc_prediction_raw ──► fsae_visualization ──► RViz
-```
+
+| Port | Required? | Used for |
+|---|---|---|
+| `selected_trajectory` | yes | the reference path; spline curvature and heading for the model |
+| `car_position` | yes | x, y, yaw of the reference point (the ZED lens on the kart) |
+| `<odom_topic>` | no, but v_x falls back to open loop without it | v_x (and v_y, yaw rate when the twist is used) |
+| `<imu_topic>` | no | yaw rate, ahead of every other source |
+| `curr_vel`, `drive_status` | no | 2nd and 3rd-choice v_x |
+| `cone_detection` | no | the proximity brake (sets the speed command to 0) |
+| `<cmd_topic>` | always published | steering (deg, +left) + speed (m/s); `frame_id` marks a safe-stop |
+| `accel_cmd` | always published | raw acceleration, unconsumed (gap B1) |
+| `nmpc_prediction_raw`, `nmpc_telemetry` | only when their `nmpc_publish_*` flag is on | RViz and the dashboard |
 
 Selected by the `controller:=nmpc` launch arg (default is `stanley`), so
 running this node is strictly opt-in and nothing about the existing default

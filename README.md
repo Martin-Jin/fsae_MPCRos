@@ -24,7 +24,9 @@ rebased onto `feat/teleop-node-ground-testing` plus a steering-only go-kart laun
 (`nmpc_gokart.launch.py`). Shared files such as `fsae_params.yaml` and
 `autonomous.launch.py` are that branch's versions, so they differ from `main` here.
 It also carries `control/fsae_can_bridge/fsae_can_bridge/joystick_teleop.py`, which gains
-the NMPC steering mode. See `src/fsae_autonomous/docs/NMPC_GOKART_GROUND_TEST.md`.
+the NMPC steering mode, and `docs/ARCHITECTURE.md` with the NMPC added to its flow charts.
+See `src/fsae_autonomous/docs/NMPC_GOKART_GROUND_TEST.md`, and
+`src/fsae_autonomous/docs/NMPC_GOKART_BRINGUP_CHECKLIST.md` for the to-do list.
 
 ## Status: replaces an earlier, different port in this repo's history
 
