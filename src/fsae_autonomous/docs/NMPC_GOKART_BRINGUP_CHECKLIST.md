@@ -14,7 +14,7 @@ below is a placeholder until step 3 is done.
 
 - [ ] Get the branch:
   ```bash
-  cd ~/ros2_ws/src/fsae_autonomous && git fetch && git switch mpc-ground-test && git pull
+  cd ~/ros2_ws/src/fsae_autonomous && git fetch && git switch feat/mpc_ground_test && git pull
   ```
   The commit must include "measured +S = right sign". An older push of this branch
   (`d22d512`) steers the wrong way.
@@ -161,5 +161,5 @@ so nothing reaches the servo.
 ## 6. After each session
 
 - [ ] Note what was measured or changed in `NMPC_GOKART_GROUND_TEST.md`.
-- [ ] Commit to `mpc-ground-test` and mirror the changed files to `fsae_MPCRos`
-  (branch `mpc-ground-test`, same relative path under `src/fsae_autonomous/`).
+- [ ] Commit to `feat/mpc_ground_test` and mirror the changed files to `fsae_MPCRos`
+  (branch `mpc-ground-test` there, same relative path under `src/fsae_autonomous/`).

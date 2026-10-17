@@ -4,7 +4,7 @@
 real hardware.** The rest of this document is a full inventory of every mismatch found
 while porting it; this section is the short list of why it cannot be driven today.
 
-> **Go-kart ground test (branch `mpc-ground-test`):** a steering-only test path exists,
+> **Go-kart ground test (branch `feat/mpc_ground_test`):** a steering-only test path exists,
 > see [`NMPC_GOKART_GROUND_TEST.md`](NMPC_GOKART_GROUND_TEST.md). It sidesteps the CAN
 > blockers below by using the kart's serial path, takes `v_x` and yaw rate from the ZED's
 > odometry and IMU (A1, A3), sets `v_y` to 0 (A2), and leaves throttle and brake with the
