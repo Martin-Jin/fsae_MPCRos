@@ -17,6 +17,8 @@ full `fsae_autonomous` workspace (e.g. this repo's
 `src/fsae_autonomous/control/fsae_control/...` is that workspace's
 `control/fsae_control/...`), so a diff against that workspace is direct.
 
+How this repo is kept in sync with `fsae_autonomous` and the simulator repos, which parameter layer wins under each launch file, and the before/after checklist for every change: [docs/SYNC.md](docs/SYNC.md). Files under `src/fsae_autonomous/` follow production's rule and do not reference the simulator.
+
 ## Status: replaces an earlier, different port in this repo's history
 
 An earlier version of this repo (see `git log`) contained a **different**
