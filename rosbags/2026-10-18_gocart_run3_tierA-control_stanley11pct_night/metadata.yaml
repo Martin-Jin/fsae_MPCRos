@@ -1,0 +1,190 @@
+rosbag2_bagfile_information:
+  version: 5
+  storage_identifier: sqlite3
+  duration:
+    nanoseconds: 244926868794
+  starting_time:
+    nanoseconds_since_epoch: 1792311395851193039
+  message_count: 77880
+  topics_with_message_count:
+  - topic_metadata:
+      name: /fsae/slam/car_position
+      type: geometry_msgs/msg/Pose
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 2066
+  - topic_metadata:
+      name: /tf
+      type: tf2_msgs/msg/TFMessage
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n\
+        \    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec:\
+        \ 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+    message_count: 4098
+  - topic_metadata:
+      name: /fsae/control/actuator_cmd
+      type: fsae_interfaces/msg/ActuatorCmd
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n\
+        \    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec:\
+        \ 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+    message_count: 12231
+  - topic_metadata:
+      name: /fsae/slam/left_track
+      type: fsae_interfaces/msg/Track
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 4899
+  - topic_metadata:
+      name: /fsae/control/drive
+      type: ackermann_msgs/msg/AckermannDrive
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 2082
+  - topic_metadata:
+      name: /fsae/control/cmd_vel
+      type: ackermann_msgs/msg/AckermannDriveStamped
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 2\n  deadline:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n\
+        \    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec:\
+        \ 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+    message_count: 14312
+  - topic_metadata:
+      name: /cone_detection_fused
+      type: fsae_interfaces/msg/ConeDetection
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 1671
+  - topic_metadata:
+      name: /fsae/planning/selected_trajectory
+      type: geometry_msgs/msg/PoseArray
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 2126
+  - topic_metadata:
+      name: /zed/zed_node/odom
+      type: nav_msgs/msg/Odometry
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 3600
+  - topic_metadata:
+      name: /tf_static
+      type: tf2_msgs/msg/TFMessage
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 1\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false\n- history: 3\n  depth: 0\n  reliability: 1\n  durability: 1\n  deadline:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n\
+        \    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec:\
+        \ 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+    message_count: 2
+  - topic_metadata:
+      name: /zed/zed_node/imu/data
+      type: sensor_msgs/msg/Imu
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 23830
+  - topic_metadata:
+      name: /fsae/slam/right_track
+      type: fsae_interfaces/msg/Track
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 4899
+  - topic_metadata:
+      name: /fsae/perception/cone_detection
+      type: fsae_interfaces/msg/ConeDetection
+      serialization_format: cdr
+      offered_qos_profiles: "- history: 3\n  depth: 0\n  reliability: 1\n  durability:\
+        \ 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n\
+        \    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions:\
+        \ false"
+    message_count: 2064
+  compression_format: ''
+  compression_mode: ''
+  relative_file_paths:
+  - go_cart_testing_3_0.db3
+  - go_cart_testing_3_1.db3
+  - go_cart_testing_3_2.db3
+  - go_cart_testing_3_3.db3
+  - go_cart_testing_3_4.db3
+  files:
+  - path: go_cart_testing_3_0.db3
+    starting_time:
+      nanoseconds_since_epoch: 1792311395851193039
+    duration:
+      nanoseconds: 59989902683
+    message_count: 19715
+  - path: go_cart_testing_3_1.db3
+    starting_time:
+      nanoseconds_since_epoch: 1792311455852155954
+    duration:
+      nanoseconds: 59994450476
+    message_count: 18830
+  - path: go_cart_testing_3_2.db3
+    starting_time:
+      nanoseconds_since_epoch: 1792311515853068165
+    duration:
+      nanoseconds: 59998864441
+    message_count: 18765
+  - path: go_cart_testing_3_3.db3
+    starting_time:
+      nanoseconds_since_epoch: 1792311575857278561
+    duration:
+      nanoseconds: 59996134820
+    message_count: 19047
+  - path: go_cart_testing_3_4.db3
+    starting_time:
+      nanoseconds_since_epoch: 1792311635857422745
+    duration:
+      nanoseconds: 4920639088
+    message_count: 1523

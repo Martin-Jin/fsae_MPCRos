@@ -44,6 +44,8 @@ there.
 
 ## Open-loop replay results (rosbag, NMPC never drove)
 
+The two bags (LiDAR removed) are in `rosbags/`, with replay commands in `rosbags/README.md`.
+
 | Check | Result |
 |---|---|
 | Steering sign vs Stanley (when Stanley > 3°) | 96 % agree |
