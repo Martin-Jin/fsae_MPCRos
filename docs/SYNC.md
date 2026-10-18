@@ -20,7 +20,7 @@ A mirrored file must never be edited here to add sim context. Fix it in `fsae_au
 | `fsae_planning` (inside the FSDS simulator checkout) | where the MPC is developed and live-tested in simulation | never by an agent, except one named feature branch on explicit ask |
 | `fsae_MPCTest` | offline tuner, plus `fsds_simulator/`, the change ledger for `fsae_planning` | routinely |
 
-Branch pairing: `fsae_autonomous` `main` maps to `main` here, and `feat/mpc_ground_test` maps to `mpc-ground-test`.
+Branch pairing: `fsae_autonomous` `main` maps to `main` here, and `feat/mpc_ground_test` maps to `mpc-ground-test`. The go-kart connection scripts (`scripts/jetson-connect.sh`, `scripts/jetson-wifi.sh`) and their doc (`docs/JETSON_TELEOP.md`) come from `fsae_autonomous` `test/planning-teleop-ground-test` and are backed up on `mpc-ground-test` here.
 
 ## Before and after any change to mirrored files
 
