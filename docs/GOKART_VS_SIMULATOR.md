@@ -53,3 +53,13 @@ there.
 
 The left veer at the orange cones seen on runs 1-3 is not isolated here. Run 4 (no orange
 cones) is the clean reference; run 3's overall figures match it.
+
+## The kart track in the offline simulator
+
+The loop the kart drove on 2026-10-18 is rebuilt from run 2's rosbag as the offline track
+`gokart_night_loop_20261018` (17 blue, 25 yellow, 4 orange cones; `fsae_MPCTest`'s
+`tuner/tools/rosbag_cone_map.py`, copy in `fsae_MPCTest/fsds_simulator/tracks/`). Run 3,
+from a separate stack start, matches it to a median 0.11 m after alignment. It is a
+cone map in the ZED odometry frame, so it can be loaded by name in the offline tools, but
+the offline plant is the simulated car, not the kart. The orange start-gate cones sit
+inside the loop, which is where the kart veered left on runs 1-3.

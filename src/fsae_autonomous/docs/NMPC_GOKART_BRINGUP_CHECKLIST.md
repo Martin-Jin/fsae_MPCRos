@@ -8,7 +8,8 @@ each box. The *why* behind each item is in
 
 | Check | Status |
 |---|---|
-| Unit tests (`colcon test --packages-select fsae_control`) | pass on a PC |
+| Unit tests (`colcon test --packages-select fsae_control`) | pass on a PC (57, including the node fallback tests) |
+| Logged kart runs replayed through the NMPC with the shadow settings (open loop; Stanley drove) | done on a PC. Steering sign agrees with Stanley on 96 % of ticks. Found and fixed: standstill damping that cut steering to 7 %, odometry bursts, an open-loop speed runaway, stale commands on a solver early return, padded paths. Steering now about 75-80 % of the path curvature's need. See `NMPC_GOKART_GROUND_TEST.md`, "From logged Stanley laps" |
 | Scripted node test: NMPC + teleop NMPC mode with fake path/pose/odometry/IMU/pad | pass on a PC. Deadman, R1 mode, stale and safe-stop fallbacks, steering sign mapping |
 | Bench test (`nmpc_bench.launch.py`): end-of-path hold, no command to any vehicle | pass, run by hand on a PC |
 | Shadow mode (`nmpc_shadow.launch.py`) publishes only on its own topic | pass on a PC with scripted inputs |
@@ -171,6 +172,14 @@ so nothing reaches the servo.
 - [ ] With the kart driven by something else (the pad, or Stanley), run
   `ros2 launch fsae_bringup nmpc_shadow.launch.py`. The NMPC publishes only on the unused
   `/fsae/control/nmpc_shadow_cmd`, so it cannot steer.
+- [ ] The `nmpc_controller` log stays on `v_x_src=car_odom+imu`. Switches to
+  `last_cmd (open-loop)` mean odometry gaps longer than the launch's `state_timeout_s`
+  (1.0 s); logged runs had gaps up to 0.84 s, worse with more load on the Jetson.
+- [ ] `solve_ms` in the log stays under 50 ms (the control tick). On a laptop it was
+  31 ms median, 45 ms p95, 87 ms worst; the Jetson is slower.
+- [ ] In a steady corner the NMPC asks for roughly the steering Stanley uses (a few
+  degrees, same sign), not a fraction of a degree. A fraction of a degree means the
+  standstill damping band is back at its default (0.5-3.0 m/s).
 - [ ] The predicted path follows the planner path and the NMPC's arrow turns the same way
   into bends as the kart. See
   [`NMPC_VALIDATION_AND_TESTING.md`](NMPC_VALIDATION_AND_TESTING.md#3-shadow-mode-on-the-kart-validate-prediction-nmpc-never-drives).
@@ -194,6 +203,9 @@ so nothing reaches the servo.
 - [ ] Hold **X + R1** with a path ahead. The wheels follow the NMPC: a bend to the left
   turns the wheels left. **If they turn the wrong way, stop** and flip `auto_steer_sign`.
 - [ ] Release R1: the stick steers again. Release X: everything neutral.
+- [ ] With the kart stationary and a bend ahead, X + R1 held: the wheels should not swing
+  towards the bend before the kart moves. The standstill damping now only covers
+  0.1-0.3 m/s (UNVERIFIED); if they pre-steer, raise `nmpc_standstill_fade_speed` a little.
 - [ ] Block the camera or stop the planner: within 0.3 s the steering goes to 0 and the
   throttle is cut.
 - [ ] With the planner running, the `nmpc_controller` log prints
