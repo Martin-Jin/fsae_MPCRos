@@ -28,6 +28,7 @@ Run every `colcon`/`ros2` command below from the colcon workspace root.
 | `nmpc_shadow.rviz` | RViz config for shadow mode (`nmpc_shadow.launch.py`): as `nmpc_gokart.rviz`, with the arrow showing the NMPC's unsent steering. |
 | `nmpc_gokart.rviz` | RViz config for the go-kart ground test (`nmpc_gokart.launch.py`): the bench displays plus the SLAM trajectory and a TF display. |
 | `nmpc_telemetry_gui.py` | Live matplotlib dashboard (bird's-eye car + predicted path + rolling error/command charts), see "Live telemetry GUI" below. |
+| `GOKART_DIFFERENCES.md` | Every setting the go-kart launches change from the default design, and why, plus the node fixes found by replaying logged kart runs. |
 
 ## How it fits into the pipeline
 
@@ -116,7 +117,7 @@ Selected by the `controller:=nmpc` launch arg (default `stanley`), so the node i
 
 | Topic | Type | Required? | Notes |
 |---|---|---|---|
-| `/fsae/planning/selected_trajectory` | `geometry_msgs/PoseArray` | **Required** | The planner's centreline. Must have ≥2 points and be refreshed at least every `PATH_TIMEOUT` (0.5 s), or the node safe-stops. |
+| `/fsae/planning/selected_trajectory` | `geometry_msgs/PoseArray` | **Required** | The planner's centreline. Must have ≥2 points and be refreshed at least every `PATH_TIMEOUT` (0.5 s), or the node safe-stops. Repeated consecutive waypoints are dropped on arrival (the solver rejects zero-length steps). |
 | `/fsae/slam/car_position` | `geometry_msgs/Pose` | **Required** | `x`, `y` in `.position`; **yaw in radians in `.orientation.w`** (repo convention, not a real quaternion, see gap A5). No solve happens until one message arrives. |
 | `odom_topic` param, default `/fsae/slam/car_odom` | `nav_msgs/Odometry` | Optional | The default topic has no publisher (gaps A1/A2/A3/A7). Preferred `v_x`/`v_y`/yaw-rate source while under `state_timeout_s` (0.3 s) old. `odom_velocity_source: twist` reads the twist; `pose_diff` differentiates the stamped pose. The kart launch uses `/zed/zed_node/odom` with `pose_diff`. |
 | `imu_topic` param, default `''` (off) | `sensor_msgs/Imu` | Optional | When set and fresh, `angular_velocity.z` (× `imu_yaw_rate_sign`) is the yaw rate, ahead of every other source. The kart launch uses `/zed/zed_node/imu/data`. |
@@ -125,8 +126,13 @@ Selected by the `controller:=nmpc` launch arg (default `stanley`), so the node i
 | `/fsae/perception/cone_detection` | `fsae_interfaces/ConeDetection` | Optional | Proximity emergency-brake input, car-local frame. Empty or absent makes the brake a no-op. |
 
 If none of `odom_topic`/`curr_vel`/`drive_status` is publishing (true on the car's
-default topics and on the bench rig), `v_x` falls back to the node's own last commanded
-speed. That is open loop, but it does not stop the node running.
+default topics and on the bench rig), `v_x` falls back to an open-loop estimate: the last
+`v_x` plus the NMPC's own acceleration command integrated over one tick. That is open
+loop, but it does not stop the node running.
+
+Odometry older than `state_timeout_s` (by arrival time) counts as not publishing. The kart
+launches set it to 1.0 s, because the ZED odometry reaches the node in bursts on the
+Jetson (see `docs/NMPC_GOKART_GROUND_TEST.md`).
 
 ### Publishes
 
@@ -198,6 +204,8 @@ applies over the default vehicle model. The defaults it does not override come f
 simulated vehicle (UNVERIFIED on the kart). See
 [`docs/NMPC_GOKART_GROUND_TEST.md`](../../../../docs/NMPC_GOKART_GROUND_TEST.md) for
 controls, measurements and the bring-up checklist.
+[`GOKART_DIFFERENCES.md`](GOKART_DIFFERENCES.md) lists every kart setting that differs
+from the default design, with the reason for each.
 
 ## Visualising the predicted trajectory in RViz
 
@@ -282,6 +290,10 @@ colcon test-result --verbose
 - `test_nmpc_plant_overrides.py`: the `plant_*` overrides. Defaults untouched when
   omitted, bad input rejected, steering limit respected, and the kart geometry asking for
   the kinematic steering angle on a steady arc.
+- `test_nmpc_node_fallbacks.py`: the node itself, tick by tick. The open-loop `v_x`
+  estimate equals the integral of the acceleration command (no runaway), a path the
+  solver cannot use gives a safe-stop rather than the previous command again, and
+  repeated waypoints are dropped so a padded planner path still solves.
 - `test_bench_scenarios.py`: geometry checks for `bench_scenarios.py`. Evenly spaced
   turn/S-curve waypoints with bounded curvature, S-curve bends that cancel, and
   `random_start_offset()` within its bound, and the mock pose held after the end of the

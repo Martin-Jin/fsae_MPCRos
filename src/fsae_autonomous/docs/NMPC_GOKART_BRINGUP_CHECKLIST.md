@@ -118,6 +118,10 @@ From the table:
 The two sides need separate scales: the firmware maps −180 … 0 onto 1403 µs of servo pulse
 but 0 … +180 onto only 847 µs.
 
+Cross-check: logged Stanley laps suggest about 4-5 S per degree on the left
+(`NMPC_GOKART_GROUND_TEST.md`, "From logged Stanley laps"). A bench value far from that
+needs a second look before the first run.
+
 ### 3b. Geometry
 
 | Value | How | Launch argument | Placeholder now |

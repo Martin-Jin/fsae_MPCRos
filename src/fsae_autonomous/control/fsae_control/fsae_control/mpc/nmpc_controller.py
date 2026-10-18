@@ -321,7 +321,7 @@ class NMPCControllerNode(Node):
         self._curr_vel_speed = 0.0
         self._have_drive_status = False
         self._drive_status_speed = 0.0
-        self._last_cmd_speed = 0.0       # last-resort v_x fallback (open-loop)
+        self._open_loop_speed = 0.0      # last-resort v_x fallback (open-loop), see _control_step
         self._active_vx_source: str | None = None   # logged on change only
 
         self._v_des_prev: float | None = None
@@ -359,9 +359,16 @@ class NMPCControllerNode(Node):
     # ------------------------------------------------------------------
 
     def _path_cb(self, msg: PoseArray) -> None:
-        self._path = np.array(
+        path = np.array(
             [[p.position.x, p.position.y] for p in msg.poses], dtype=np.float64
         ) if msg.poses else np.empty((0, 2))
+        # The planner occasionally repeats a waypoint. The solver's spline reference
+        # needs strictly increasing arc length and rejects such a path outright, so
+        # drop zero-length steps here rather than lose the tick.
+        if len(path) > 1:
+            keep = np.concatenate(([True], np.any(np.diff(path, axis=0) != 0.0, axis=1)))
+            path = path[keep]
+        self._path = path
         self._path_stamp = self.get_clock().now()   # GAP C6: arrival time, no real header
 
     def _pose_cb(self, msg: Pose) -> None:
@@ -478,7 +485,7 @@ class NMPCControllerNode(Node):
             return self._curr_vel_speed, v_y, yaw_rate, 'curr_vel'
         if self._have_drive_status:
             return self._drive_status_speed, v_y, yaw_rate, 'drive_status'
-        return self._last_cmd_speed, v_y, yaw_rate, 'last_cmd (open-loop)'
+        return self._open_loop_speed, v_y, yaw_rate, 'last_cmd (open-loop)'
 
     def _path_direction_ok(self, path: np.ndarray) -> bool:
         """GAP C7: reject a path pointing away from the car's own heading."""
@@ -521,7 +528,7 @@ class NMPCControllerNode(Node):
         msg.drive.jerk = 0.0
         msg.drive.steering_angle_velocity = 0.0
         self.pub_cmd.publish(msg)
-        self._last_cmd_speed = 0.0
+        self._open_loop_speed = 0.0
         self.get_logger().warn(f'NMPC safe-stop: {reason}', throttle_duration_sec=1.0)
 
     def _publish_nmpc_prediction(self, xy: np.ndarray) -> None:
@@ -636,13 +643,20 @@ class NMPCControllerNode(Node):
 
         # ── Phase 3: NMPC solve, guarded (GAP B6) ────────────────────────
         try:
+            # compute() returns early without touching last_telemetry when it cannot
+            # solve: fewer than 3 path points, or a path PathReference rejects (the
+            # planner sends occasional 4-point paths that do this). Clear it first so
+            # an early return reads as a failed solve here, not as last tick's command
+            # published again as if it were fresh.
+            self._mpc.last_telemetry = {}
+            self._mpc.last_prediction_xy = None
             self._mpc.compute(
                 path=self._path, car_pos=self._car_pos, car_yaw=self._car_yaw,
                 car_speed=car_speed, desired_speed=desired_speed,
                 car_yaw_rate=car_yaw_rate, pose_age_s=pose_age_s, car_vy=car_vy,
             )
-            delta_cmd = float(self._mpc.last_telemetry.get('delta_cmd', 0.0))
-            a_cmd = float(self._mpc.last_telemetry.get('a_cmd', 0.0))
+            delta_cmd = float(self._mpc.last_telemetry.get('delta_cmd', math.nan))
+            a_cmd = float(self._mpc.last_telemetry.get('a_cmd', math.nan))
             solve_ok = math.isfinite(delta_cmd) and math.isfinite(a_cmd)
             if self._mpc.last_prediction_xy is not None:
                 self._publish_nmpc_prediction(self._mpc.last_prediction_xy)
@@ -729,7 +743,15 @@ class NMPCControllerNode(Node):
         msg.drive.jerk = 0.0
         msg.drive.steering_angle_velocity = 0.0
         self.pub_cmd.publish(msg)
-        self._last_cmd_speed = v_cmd
+        # Open-loop v_x estimate for the next tick, used only when no speed source is
+        # live: integrate a_cmd over one tick from this tick's v_x. Do not store v_cmd
+        # here. v_cmd already leads v_x by a_cmd * accel_to_speed_horizon_s, so feeding
+        # it back as next tick's v_x adds that lead again every tick and the estimate
+        # climbs at (horizon / dt) = 5x the planned acceleration, reaching v_max within
+        # a fraction of a second while the vehicle has not sped up. A short gap in the
+        # odometry is enough to trigger it.
+        self._open_loop_speed = 0.0 if v_cmd == 0.0 else float(np.clip(
+            car_speed + a_cmd / CONTROL_HZ, 0.0, self._v_max))
 
         # GAP B1: raw signed acceleration, published so it is not silently
         # discarded. Nothing subscribes to this topic today.

@@ -32,8 +32,8 @@ provides.
    full extent of braking through this controller.
 4. **The car has no speed, yaw-rate or lateral-velocity sensor wired in.** The model
    needs all three every tick. On the car (default topics) `v_x` falls back through an
-   unfilled topic to 1 m/s-resolution CAN data to the controller's own last commanded
-   speed (open loop), `v_y` is `0.0`, and yaw rate is a one-tick-delayed finite
+   unfilled topic to 1 m/s-resolution CAN data to an open-loop estimate (the last
+   speed integrated with the controller's own acceleration command), `v_y` is `0.0`, and yaw rate is a one-tick-delayed finite
    difference of the pose (gaps A1-A3). Wrong slip angles fed into a nonlinear vehicle
    model are a worse failure mode than Stanley being wrong, since Stanley has no model.
 5. **A rejected CAN frame silently latches the previous command instead of stopping the
@@ -122,8 +122,10 @@ own comment marks it "not sure if this is needed").
    stamped pose. The kart launch uses `/zed/zed_node/odom` with `pose_diff`.
 2. `/fsae/hardware/curr_vel` (placeholder).
 3. `/fsae/hardware/drive_status` (coarse but real).
-4. The controller's own last commanded speed (open loop, the same assumption Stanley
-   makes).
+4. An open-loop estimate: the last `v_x` plus the controller's own acceleration command
+   integrated over one tick (`a_cmd / 20 Hz`). Not the published speed command: that leads
+   `v_x` by `a_cmd * accel_to_speed_horizon_s`, so feeding it back would add the lead
+   again every tick and run the estimate up to `v_max` at 5x the planned acceleration.
 
 **Closing it properly**: a real speed source, either wheel speed decoded onto a CAN
 frame `can_decoder` already reads and republished on `/fsae/hardware/curr_vel`, or ZED

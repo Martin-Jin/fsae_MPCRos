@@ -110,9 +110,28 @@ laptop instead of the Jetson needs a remote-viz setup, which this branch does no
 | ZED pitch | 7.70° down | ZED IMU gravity vector, URDF | measured |
 | Road-wheel steering limit | 25° (`plant_max_steer_deg`) | simulation vehicle value, kept as a placeholder | **unmeasured.** UNVERIFIED |
 | Steering sign | `auto_steer_sign` −1: **+S steers RIGHT** | measured 2026-10-14 on the Stanley steering test (`test/planning-teleop-ground-test`), matches teleop's `invert_steer: true` | measured. The ECU firmware comment (+S = left) is wrong for this kart |
-| ECU S per road-wheel degree, left / right | 1.0 / 1.0 (`auto_steer_scale_left/right`) | placeholder | **unmeasured**. The firmware's S → pulse map is asymmetric (−180 spans 1403 µs, +180 only 847 µs), so each side needs its own value |
+| ECU S per road-wheel degree, left / right | 1.0 / 1.0 (`auto_steer_scale_left/right`) | placeholder | **unmeasured**. The firmware's S → pulse map is asymmetric (−180 spans 1403 µs, +180 only 847 µs), so each side needs its own value. Logged laps suggest about 4-5 left (see below); 1.0 would steer at roughly a fifth of what the NMPC asks |
 | Steering lag `tau_delta` | 0.08 s | simulation vehicle value | **unmeasured.** UNVERIFIED |
 | Mass, yaw inertia, cornering stiffness | simulation vehicle's | not used: the model is kinematic below 8 m/s (`plant_v_blend_lo/hi` 8/9) | UNVERIFIED, n/a for this test |
+
+### From logged Stanley laps
+
+Four runs were logged on 2026-10-18 with Stanley steering (`test/planning-teleop-ground-test`,
+fixed 11-13 % throttle, night, headlamp only). Runs 3 and 4 recorded the path, pose,
+odometry and IMU, and were replayed through `nmpc_controller` with the shadow-mode
+settings. **The NMPC never drove; these are open-loop checks.**
+
+| Check | Result | Consequence |
+|---|---|---|
+| Steering sign against Stanley, when Stanley steers more than 3° | agrees on 96 % of ticks (runs 3 and 4) | sign convention and `auto_steer_sign` −1 consistent |
+| Steering size, default standstill damping | 0.7° median against 8.7° the path curvature needs (`atan(L·kappa)`, L = 1.00 m) | the kart's speed (0.5-1.1 m/s) sits inside the damping band. Kart launches now narrow it to 0.1-0.3 m/s |
+| Steering size, narrowed damping | about 75-80 % of `atan(L·kappa)` at the measured speed; correlation with Stanley 0.67-0.72 | at walking pace the horizon covers under a metre, so the cost leaves some heading error for the closed loop to remove |
+| Odometry arrival | stamps evenly spaced at 15 Hz, but arrival gaps over 0.3 s cover 7-43 % of each run (worse with more recording and RViz load; longest 0.84 s) | kart launches set `state_timeout_s` 1.0; at 0.3 s the speed source fell back to open loop on 19 % of ticks |
+| Path messages | 4-7 % empty; a few padded with repeated end points | empty paths safe-stop as designed; repeated points are now dropped on arrival |
+| Solve time on a laptop CPU | 31 ms median, 45 ms p95, 87 ms worst | the 50 ms tick has little margin. Check `solve_ms` on the Jetson in shadow mode |
+| ECU S needed per degree of `atan(L·kappa)`, left turns | about 4-5 (S at a measured yaw rate / speed, steady corners) | bench calibration still needed; right turns had too few samples, and the firmware asymmetry predicts about 1.7x the left value |
+
+All of the above is UNVERIFIED as closed-loop behaviour until the NMPC steers the kart.
 
 ### Measurements still needed
 

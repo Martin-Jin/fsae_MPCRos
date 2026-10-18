@@ -52,7 +52,7 @@ Working: every test passes. The files:
 | Sensors | ZED camera, LiDAR, cone detection | none run |
 | Pose (`/fsae/slam/car_position`) | SLAM pose: noise, latency, drift, occasional jumps | scripted by `mock_pose_path_publisher`, perfect: no noise, latency, drift or jumps |
 | Path (`/fsae/planning/selected_trajectory`) | live planner path from the cones, changes every update | one fixed, smooth line-and-arc path from `bench_scenarios.py` |
-| Speed source (v_x) | ZED odometry, differentiated | no odometry: falls back to the node's own last command (red `last_cmd (open-loop)` in the GUI) |
+| Speed source (v_x) | ZED odometry, differentiated | no odometry: falls back to an open-loop estimate from the node's own acceleration command (red `last_cmd (open-loop)` in the GUI) |
 | Yaw rate | ZED IMU | no IMU: Δyaw/Δt of the mock pose |
 | Proximity brake | cone detections | no cones, never fires |
 | Closed loop | the kart moves when steered | none: nothing moves the car |

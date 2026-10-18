@@ -29,6 +29,8 @@ How this repo is kept in sync with `fsae_autonomous` and the simulator repos, wh
 | `src/fsae_autonomous/docs/NMPC_GOKART_GROUND_TEST.md` | what the kart test runs (steering only), pad controls, measurements used and still needed |
 | `src/fsae_autonomous/docs/NMPC_VALIDATION_AND_TESTING.md` | unit tests, the bench test (no vehicle) and shadow mode (the NMPC watches while something else drives) |
 | `src/fsae_autonomous/control/fsae_control/fsae_control/mpc/MPC_NODE_DOCS.md` | the node: topics, parameters, the input/output flow chart, launches |
+| `src/fsae_autonomous/control/fsae_control/fsae_control/mpc/GOKART_DIFFERENCES.md` | every kart setting that differs from the default design, and why |
+| `docs/GOKART_VS_SIMULATOR.md` | what differs between the kart NMPC and the simulator NMPC it was ported from, and the rosbag replay results |
 | `src/fsae_autonomous/docs/NMPC_INTEGRATION_GAPS.md` | every input or channel the car cannot supply yet, and the workaround |
 | `src/fsae_autonomous/docs/ARCHITECTURE.md` | the whole stack, with the NMPC in its three flow charts |
 

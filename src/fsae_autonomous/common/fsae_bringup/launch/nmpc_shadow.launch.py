@@ -63,6 +63,22 @@ def generate_launch_description():
                 'odom_velocity_source': 'pose_diff',
                 'use_measured_vy': False,
                 'imu_topic': '/zed/zed_node/imu/data',
+                # Odometry arrives in bursts on the Jetson: by arrival time, gaps over
+                # 0.3 s covered 7-43 % of logged laps (worse with more load), although
+                # the stamps are evenly spaced at 15 Hz. At the 0.3 s default the
+                # v_x source then flips to the open-loop estimate for much of the lap.
+                # 1.0 s covers the longest logged gap (0.84 s); at kart speeds a
+                # second-old speed is close enough.
+                'state_timeout_s': 1.0,
+                # Standstill steering damping (nmpc_standstill_*): the default band,
+                # full damping below 0.5 m/s fading out by 3.0 m/s, covers the kart's
+                # whole ground-test speed range (0.5-1.1 m/s on logged laps). Replaying
+                # those laps, it cut the NMPC's steering to about 7 % of what the path
+                # curvature needs (0.7 deg median against 8.7 deg). Narrowed to the
+                # moment of launch, which brings it to about 75-80 %. UNVERIFIED on
+                # the kart: check the launch for an early steer.
+                'nmpc_standstill_speed': 0.1,
+                'nmpc_standstill_fade_speed': 0.3,
                 'v_max': float_arg('v_max'),
                 'v_min': float_arg('v_min'),
                 'plant_lf': float_arg('plant_lf'),
