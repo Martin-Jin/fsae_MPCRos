@@ -56,10 +56,20 @@ cones) is the clean reference; run 3's overall figures match it.
 
 ## The kart track in the offline simulator
 
-The loop the kart drove on 2026-10-18 is rebuilt from run 2's rosbag as the offline track
-`gokart_night_loop_20261018` (17 blue, 25 yellow, 4 orange cones; `fsae_MPCTest`'s
-`tuner/tools/rosbag_cone_map.py`, copy in `fsae_MPCTest/fsds_simulator/tracks/`). Run 3,
-from a separate stack start, matches it to a median 0.11 m after alignment. It is a
-cone map in the ZED odometry frame, so it can be loaded by name in the offline tools, but
-the offline plant is the simulated car, not the kart. The orange start-gate cones sit
-inside the loop, which is where the kart veered left on runs 1-3.
+The loop the kart drove on 2026-10-18 is the offline track `gokart_night_loop_20261018`
+(17 blue, 22 yellow, 1 orange cone): run 2's rosbag replayed through the production SLAM
+node (`cone_landmark_mapper`, built from `src/fsae_autonomous`), its final map converted
+with `fsae_MPCTest`'s `tuner/tools/rosbag_cone_map.py --slam`. Copy in
+`fsae_MPCTest/fsds_simulator/tracks/`; method and results in `fsae_MPCTest`'s
+`docs/guides/offline_guide.md`.
+
+This was also the first run of the SLAM node on kart data (offline replay, not live):
+
+| Run | SLAM result |
+|---|---|
+| 2, 3 | 39 cones each, the two runs agree to 0.012 m median after alignment. Cone pairs seen in one camera frame match the map to 0.011 m median (odometry-only map: 0.04-0.06 m) |
+| 4 (odometry drifts about 1 m per lap) | one clean loop of 41 cones where odometry alone gave 107 (duplicated rings) |
+| 1 (odometry jumps about 6 m mid-run) | fails: 77 cones, two offset loops. No relocalisation, so re-seen cones miss the association gate after the jump |
+
+The cones were adjusted between runs, so cross-run numbers mix map error with moved cones.
+The orange start-gate cones sat inside the loop, where the kart veered left on runs 1-3.
