@@ -131,6 +131,8 @@ settings. **The NMPC never drove; these are open-loop checks.**
 | Solve time on a laptop CPU | 31 ms median, 45 ms p95, 87 ms worst | the 50 ms tick has little margin. Check `solve_ms` on the Jetson in shadow mode |
 | ECU S needed per degree of `atan(L·kappa)`, left turns | about 4-5 (S at a measured yaw rate / speed, steady corners) | bench calibration still needed; right turns had too few samples, and the firmware asymmetry predicts about 1.7x the left value |
 
+Terms in the table: *median* is the middle value once sorted (half at or below); *p95* is the value 95 % of ticks are at or below; *correlation* runs from 0 (no relation) to 1 (the two steering signals move together exactly); `atan(L·kappa)` is the steering angle a kinematic vehicle with wheelbase L needs to follow curvature kappa (1 / radius).
+
 All of the above is UNVERIFIED as closed-loop behaviour until the NMPC steers the kart.
 
 ### Measurements still needed

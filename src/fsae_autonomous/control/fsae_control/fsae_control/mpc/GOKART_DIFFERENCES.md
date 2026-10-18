@@ -64,5 +64,5 @@ in `nmpc_controller.py` give the detail; `test/test_nmpc_node_fallbacks.py` cove
 - **Curvature from few cones is noisy.** The NMPC uses path curvature for its steering
   feedforward and for its speed target (`curvature_speed()` in the node). The speed target
   only shapes the plan while the driver sets the speed.
-- **Solve time.** 31 ms median, 45 ms p95, 87 ms worst on a laptop CPU against a 50 ms
+- **Solve time.** 31 ms median, 45 ms p95 (95 % of solves at or below it), 87 ms worst on a laptop CPU against a 50 ms
   tick. Check `solve_ms` on the Jetson in shadow mode before steering.

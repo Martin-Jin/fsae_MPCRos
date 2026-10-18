@@ -30,6 +30,8 @@ so several inputs, values and code paths differ from the design the simulator va
 | `v_max` / `v_min` | car values | 3 / 1 m/s | plan for walking pace |
 | Vehicle model | full-size car, dynamic above the blend band | `lr` 0.14 m (measured), `lf` 0.86 m (CAD), kinematic below 8 m/s | |
 
+Terms: *median* = the middle value once sorted (half at or below); *p95* = 95 % at or below; *correlation* = 0 (no relation) to 1 (move together exactly); *curvature need* = `atan(L·kappa)`, the steering a kinematic vehicle of wheelbase L needs for curvature kappa; *same-frame* = two cones seen in one camera frame, measured gap against the map's gap; *after alignment* = one map shifted and rotated onto the other before comparing.
+
 ## Code fixed in production only
 
 Found by replaying the 2026-10-18 kart rosbags (runs 3 and 4) through `nmpc_controller`
