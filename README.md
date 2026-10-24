@@ -86,6 +86,10 @@ work is **superseded by this NMPC port**, not merged with it:
   topic, a degraded estimate, or an explicit "not done yet"), and what
   closing each gap properly would take. **Read this before running the
   NMPC controller on the car.**
+- **`docs/GOKART_TEST_QUICKSTART.md`**: the copy-paste kart test procedure
+  (hotspot and Jetson IP, pre-checks, start/stop with `car.sh`), from
+  `fsae_autonomous` branch `feat/first-lap`. Its links to the other kart docs
+  and scripts resolve only in that branch.
 - **RViz visualization of the NMPC's predicted trajectory** (default off,
   `nmpc_publish_prediction_enabled`): `nmpc_core.py`'s `PathReference.xy_at()`
   converts the predicted horizon back to Cartesian; `nmpc_controller.py`
